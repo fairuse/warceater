@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"github.com/CorentinB/warc"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/cheggaaa/pb/v3"
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/valyala/gozstd"
 	"github.com/fairuse/warceater/pkg/forum"
@@ -99,7 +100,12 @@ func testWarc(filename string) {
 	if err != nil {
 		panic(err)
 	}
-	r, err := warc.NewReader(f)
+
+	stats, err := os.Stat(filename)
+	bar := pb.Full.Start64(stats.Size())
+	barReader := bar.NewProxyReader(f)
+
+	r, err := warc.NewReader(barReader)
 	if err != nil {
 		panic(err)
 	}
@@ -156,6 +162,7 @@ func testWarc(filename string) {
 			//println(string(content))
 		}
 	}
+	bar.Finish()
 }
 
 // ingestCmd represents the ingest command
