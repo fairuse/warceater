@@ -1,0 +1,3 @@
+add batch handling with b:=idx.NewBatch, then b.Index() then idx.Batch(b)  [see https://github.com/blevesearch/beer-search/blob/master/main.go ]
+
+we can use https://blevesearch.com/docs/Index-Mapping/ this to flag fields for storage, but not for indexing.. that way we can store HTML content without having to index it
