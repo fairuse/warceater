@@ -4,12 +4,12 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/CorentinB/warc"
-	"github.com/valyala/gozstd"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/blevesearch/bleve/v2"
+	"github.com/valyala/gozstd"
+	"golang.org/x/net/html"
 	"log"
 	"net/http"
-	"golang.org/x/net/html"
 	"os"
 	"strings"
 )
@@ -33,9 +33,11 @@ func testDict() {
 }
 
 type Body struct {
-   User string
-   Hdr string
-   Msg string
+	Id       string
+	User     string
+	UserIcon string
+	Hdr      string
+	Msg      string
 }
 
 func testBody(r *http.Response, uri string) ([]Body, error) {
@@ -52,27 +54,30 @@ func testBody(r *http.Response, uri string) ([]Body, error) {
 
 	doc := goquery.NewDocumentFromNode(root) // not sure where to pass URI.. the internal constructor supports it, but it is not available to us
 
-	bodies := make([]Body,0)
+	bodies := make([]Body, 0)
 
 	doc.Find(".content-border").Each(func(i int, s *goquery.Selection) {
-	    // For each item found, get the band and title
-	    user := s.Find(".post-user").Text()
-	    msg := s.Find(".post-message").Text()
-	    hdr := s.Find(".post-header").Text()
-            userIconUri, ok := s.Find(".post-avatar").Find(".avatar").Find("img").Attr("src")
-            fmt.Println(userIconUri,ok)
-            if len(msg)>0 {
-		fmt.Printf("Post %d: %s : %s - %s\n", i, user, len(hdr), len(msg))
-		x := Body{ Hdr: hdr, Msg: msg, User: user }
-		bodies = append(bodies, x)
-		
-	    }
-	  })
+		// For each item found, get the band and title
+		id, _ := s.Attr("id")
+		user := s.Find(".post-user").Text()
+		msg := s.Find(".post-message").Text()
+		hdr := s.Find(".post-header").Text()
+		userIconUri, _ := s.Find(".post-avatar").Find(".avatar").Find("img").Attr("src")
+		// fmt.Println(userIconUri, ok)
+		if len(msg) > 0 {
+			// fmt.Printf("Post %s [%d]: %s : %s - %s\n", id, i, user, len(hdr), len(msg))
+			x := Body{Hdr: hdr, Msg: msg, User: user, Id: id, UserIcon: userIconUri}
+			bodies = append(bodies, x)
+
+		}
+	})
 	return bodies, nil
 }
 
 type ForumIndex struct {
-	idx bleve.Index
+	idx   bleve.Index
+	batch *bleve.Batch
+	count int
 }
 
 func newForumIndex() *ForumIndex {
@@ -81,20 +86,42 @@ func newForumIndex() *ForumIndex {
 	if err != nil {
 		panic(err)
 	}
-	return &ForumIndex{ idx: index }
+	return &ForumIndex{idx: index}
 }
 
-func (f* ForumIndex) testIndex(bodies []Body) {
+func (f *ForumIndex) addBody(id string, b Body) {
+	if f.batch == nil {
+		f.batch = f.idx.NewBatch()
+	}
+	f.count++
+	f.batch.Index(id, b)
+	if f.batch.TotalDocsSize() > 100*1024*124 {
+		fmt.Println("flushing search index batch of size", f.batch.TotalDocsSize())
+		f.idx.Batch(f.batch)
+		f.batch = nil
+	}
+}
+
+func (f *ForumIndex) Close() {
+	f.idx.Batch(f.batch)
+	f.batch = nil
+	f.idx.Close()
+	fmt.Println("indexed", f.count, "posts")
+}
+
+func (f *ForumIndex) testIndex(bodies []Body) {
 	for _, body := range bodies {
-		f.idx.Index("test",body)
+		f.addBody(body.Id, body)
+		//  f.idx.Index("test", body)
 	}
 }
 
 func testWarc() {
 
 	fi := newForumIndex()
+	defer fi.Close()
 
-	f, err := os.Open("forums.eune.leagueoflegends.com-00000.warc.gz")
+	f, err := os.Open("/big/pubdata/forums/lol/forums.eune.leagueoflegends.com-00000.warc.gz")
 	if err != nil {
 		panic(err)
 	}
@@ -117,7 +144,7 @@ func testWarc() {
 		if rectype == "application/http; msgtype=request" {
 			request, err := http.ReadRequest(bufio.NewReader(record.Content))
 			if err != nil {
-				log.Println("failed to read request",err)
+				log.Println("failed to read request", err)
 				continue
 			}
 			_ = request
@@ -137,21 +164,21 @@ func testWarc() {
 				continue
 			}
 			fi.testIndex(bodies)
-/*
-			content, err := ioutil.ReadAll(response.Body)
-			response.Body.Close()
+			/*
+				content, err := ioutil.ReadAll(response.Body)
+				response.Body.Close()
 
-			if err != nil {
-				log.Println("failed to interpret response body", err, "read",len(content),"bytes, while content was",len(content),"bytes")
-				continue
-			}
-			ctype := response.Header.Get("content-type")
-			if strings.HasPrefix(ctype, "text/html") {
-				fmt.Println(record.Header.Get("warc-target-uri"), rectype, ctype, len(content) )
-				testBody(string(content)) // note, we do not handle any content encoding yet!
-			}
-			_ = content
-*/
+				if err != nil {
+					log.Println("failed to interpret response body", err, "read",len(content),"bytes, while content was",len(content),"bytes")
+					continue
+				}
+				ctype := response.Header.Get("content-type")
+				if strings.HasPrefix(ctype, "text/html") {
+					fmt.Println(record.Header.Get("warc-target-uri"), rectype, ctype, len(content) )
+					testBody(string(content)) // note, we do not handle any content encoding yet!
+				}
+				_ = content
+			*/
 			//println(string(content))
 		}
 	}
@@ -161,4 +188,3 @@ func main() {
 	testDict()
 	testWarc()
 }
-
