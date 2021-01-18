@@ -6,6 +6,7 @@ import (
 	"github.com/CorentinB/warc"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/blevesearch/bleve/v2"
+	"github.com/microcosm-cc/bluemonday"
 	"github.com/valyala/gozstd"
 	"golang.org/x/net/html"
 	"log"
@@ -41,6 +42,8 @@ type Body struct {
 }
 
 func testBody(r *http.Response, uri string) ([]Body, error) {
+	sanitizer := bluemonday.UGCPolicy()
+
 	ctype := r.Header.Get("content-type")
 	if !strings.HasPrefix(ctype, "text/html") {
 		return nil, fmt.Errorf("not text/html")
@@ -64,10 +67,14 @@ func testBody(r *http.Response, uri string) ([]Body, error) {
 		hdr := s.Find(".post-header").Text()
 		userIconUri, _ := s.Find(".post-avatar").Find(".avatar").Find("img").Attr("src")
 		// fmt.Println(userIconUri, ok)
+		html, _ := goquery.OuterHtml(s.Find(".post-message")) // todo handle error
+		sanehtml := sanitizer.Sanitize(html)
 		if len(msg) > 0 {
 			// fmt.Printf("Post %s [%d]: %s : %s - %s\n", id, i, user, len(hdr), len(msg))
 			x := Body{Hdr: hdr, Msg: msg, User: user, Id: id, UserIcon: userIconUri}
 			bodies = append(bodies, x)
+			fmt.Println("test HTML:", html)
+			fmt.Println("sane HTML:",sanehtml)
 
 		}
 	})
