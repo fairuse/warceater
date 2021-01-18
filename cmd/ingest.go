@@ -77,14 +77,16 @@ func testBody(r *http.Response, uri string) ([]forum.Body, error) {
 		hdr := s.Find(".post-header").Text()
 		userIconUri, _ := s.Find(".post-avatar").Find(".avatar").Find("img").Attr("src")
 		// fmt.Println(userIconUri, ok)
-		ohtml, _ := goquery.OuterHtml(s.Find(".post-message")) // todo handle error
-		sanehtml := sanitizer.Sanitize(ohtml)
+
+		_ = sanitizer
+		//ohtml, _ := goquery.OuterHtml(s.Find(".post-message")) // todo handle error
+		//sanehtml := sanitizer.Sanitize(ohtml)
 		if len(msg) > 0 {
 			// fmt.Printf("Post %s [%d]: %s : %s - %s\n", id, i, user, len(hdr), len(msg))
 			x := forum.Body{Hdr: hdr, Msg: msg, User: user, Id: id, UserIcon: userIconUri}
 			bodies = append(bodies, x)
-			fmt.Println("test HTML:", ohtml)
-			fmt.Println("sane HTML:", sanehtml)
+			//fmt.Println("test HTML:", ohtml)
+			//fmt.Println("sane HTML:", sanehtml)
 
 		}
 	})
