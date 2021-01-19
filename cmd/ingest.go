@@ -95,7 +95,7 @@ func testBody(r *http.Response, uri string) ([]forum.Body, error) {
 
 func testWarc(filename string) {
 
-	fi := forum.NewForumIndex()
+	fi := forum.NewForumIndex(indexPath)
 	defer fi.Close()
 
 	f, err := os.Open(filename)
@@ -170,13 +170,12 @@ func testWarc(filename string) {
 // ingestCmd represents the ingest command
 var ingestCmd = &cobra.Command{
 	Use:   "ingest",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Ingest a WARC file and add it to the index",
+	Long: `Read any number of WARC files provided on the command line, and ingest them into the
+index. Each WARC file may be uncompressed, gzip compressed or bzip2 compressed.
+Each WARC file is parsed and all html pages are scanned against the predefined
+patters to extract posts. Each post individually is inserted into the search
+index. This can be a time-consuming operation.`,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		return nil
 	},

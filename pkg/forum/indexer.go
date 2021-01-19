@@ -11,11 +11,11 @@ type Indexer struct {
 	count int
 }
 
-func NewForumIndex() *Indexer {
+func NewForumIndex(path string) *Indexer {
 	mapping := bleve.NewIndexMapping()
-	index, err := bleve.Open("example.bleve")
+	index, err := bleve.Open(path)
 	if err != nil {
-		index, err = bleve.New("example.bleve", mapping)
+		index, err = bleve.New(path, mapping)
 		if err != nil {
 			panic(err)
 		}

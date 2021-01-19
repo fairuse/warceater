@@ -25,17 +25,19 @@ import (
 )
 
 var cfgFile string
+var indexPath string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "warceater",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Short: "An application to parse WARC files with forum posts and index their contents",
+	Long: `WARCEater is an application that can consume WARC files and scans them
+for forum posts using a pre-defined set of matching criteria. Each forum post is
+subsequently extracted and stored into a search index. The location of the index
+can be changed using the --index flag.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+To load the contents of a WARC file use: warceater ingest test.warc
+Once that process completes, search it with: warceater search <relevant keywords>`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },
@@ -50,6 +52,7 @@ func Execute() {
 	}
 }
 
+
 func init() {
 	cobra.OnInitialize(initConfig)
 
@@ -59,6 +62,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.warceater.yaml)")
 
+	rootCmd.PersistentFlags().StringVar(&indexPath, "index", "example.bleve", "index file path (default is ./example.bleve")
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
