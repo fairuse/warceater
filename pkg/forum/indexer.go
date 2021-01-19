@@ -65,6 +65,6 @@ func (f *Indexer) Search(query string) {
 	fmt.Println(searchResult.Total, "documents found")
 
 	for nr, i := range searchResult.Hits {
-		fmt.Println(nr, i.Fragments)
+		fmt.Println(nr, i.ID, i.Fragments)
 	}
 }
