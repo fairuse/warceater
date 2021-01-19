@@ -1,3 +1,6 @@
-add batch handling with b:=idx.NewBatch, then b.Index() then idx.Batch(b)  [see https://github.com/blevesearch/beer-search/blob/master/main.go ]
 
-we can use https://blevesearch.com/docs/Index-Mapping/ this to flag fields for storage, but not for indexing.. that way we can store HTML content without having to index it
+- we can use https://blevesearch.com/docs/Index-Mapping/ this to flag fields for storage, but not for indexing.. that way we can store HTML content without having to index it
+- add index-name support so that post identifiers can be prefixed
+- add a thread-id to each post
+- add a thread-seq to search post (integer id determining the sequence in the thread) (we can do thread page * 1000 + post_nr)
+V add batch handling with b:=idx.NewBatch, then b.Index() then idx.Batch(b)  [see https://github.com/blevesearch/beer-search/blob/master/main.go ]
