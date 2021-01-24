@@ -79,11 +79,11 @@ func testBody(r *http.Response, uri string) ([]forum.Body, error) {
 		// fmt.Println(userIconUri, ok)
 
 		_ = sanitizer
-		//ohtml, _ := goquery.OuterHtml(s.Find(".post-message")) // todo handle error
-		//sanehtml := sanitizer.Sanitize(ohtml)
+		ohtml, _ := goquery.OuterHtml(s.Find(".post-message")) // todo handle error
+		sanehtml := sanitizer.Sanitize(ohtml)
 		if len(msg) > 0 {
 			// fmt.Printf("Post %s [%d]: %s : %s - %s\n", id, i, user, len(hdr), len(msg))
-			x := forum.Body{Hdr: hdr, Msg: msg, User: user, Id: id, UserIcon: userIconUri}
+			x := forum.Body{Hdr: hdr, Msg: msg, User: user, Id: id, UserIcon: userIconUri, Html: sanehtml}
 			bodies = append(bodies, x)
 			//fmt.Println("test HTML:", ohtml)
 			//fmt.Println("sane HTML:", sanehtml)

@@ -13,6 +13,11 @@ type Indexer struct {
 
 func NewForumIndex(path string) *Indexer {
 	mapping := bleve.NewIndexMapping()
+	docmap := bleve.NewDocumentMapping()
+	storeOnlyMapping := bleve.NewTextFieldMapping()
+	storeOnlyMapping.Index = false // do not index, but do store
+	docmap.AddFieldMappingsAt("html", storeOnlyMapping)
+	mapping.AddDocumentMapping("post", docmap)
 	index, err := bleve.Open(path)
 	if err != nil {
 		index, err = bleve.New(path, mapping)
@@ -53,6 +58,7 @@ func (f *Indexer) TestIndex(bodies []Body) {
 }
 
 func (f *Indexer) Search(query string) {
+	fmt.Println("query string:",query)
 	q := bleve.NewQueryStringQuery(query)
 
 	searchRequest := bleve.NewSearchRequest(q)
@@ -65,6 +71,6 @@ func (f *Indexer) Search(query string) {
 	fmt.Println(searchResult.Total, "documents found")
 
 	for nr, i := range searchResult.Hits {
-		fmt.Println(nr, i.ID, i.Fragments)
+		fmt.Println(nr, i.ID, i.Fragments, i.Fields["html"])
 	}
 }

@@ -6,4 +6,5 @@ type Body struct {
 	UserIcon string
 	Hdr      string
 	Msg      string
+	Html     string `json:"html"`
 }
