@@ -1,8 +1,11 @@
 package forum
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/blevesearch/bleve/v2"
+	"html/template"
+	"strings"
 )
 
 type Indexer struct {
@@ -29,7 +32,7 @@ func NewForumIndex(path string) *Indexer {
 	return &Indexer{idx: index}
 }
 
-func (f *Indexer) AddBody(id string, b Body) {
+func (f *Indexer) AddBody(id string, b Post) {
 	if f.batch == nil {
 		f.batch = f.idx.NewBatch()
 	}
@@ -51,14 +54,14 @@ func (f *Indexer) Close() {
 	fmt.Println("indexed", f.count, "posts")
 }
 
-func (f *Indexer) TestIndex(bodies []Body) {
+func (f *Indexer) TestIndex(bodies []Post) {
 	for _, body := range bodies {
 		f.AddBody(body.Id, body)
 		//  f.idx.Index("test", body)
 	}
 }
 
-func (f *Indexer) Search(query string) {
+func (f *Indexer) Search(query string) (results []SearchResult) {
 	fmt.Println("query string:", query)
 	q := bleve.NewQueryStringQuery(query)
 
@@ -71,7 +74,29 @@ func (f *Indexer) Search(query string) {
 	fmt.Println("search took", searchResult.Took)
 	fmt.Println(searchResult.Total, "documents found")
 
+	results = make([]SearchResult, 0)
+
 	for nr, i := range searchResult.Hits {
+		bytes, err := json.Marshal(i.Fields)
+		if err != nil {
+
+		}
+		var post SearchResult
+		err = json.Unmarshal(bytes, &post)
+		if err != nil {
+
+		}
+		post.Highlights = make(map[string]template.HTML)
+		for fieldname, fragment := range i.Fragments {
+			// TODO: this should not be indexed, only stored, but something is wrong so we have to filter it here
+			if fieldname == "html" {
+				continue
+			}
+			post.Highlights[fieldname] = template.HTML(strings.Join(fragment, " &hellip; "))
+		}
 		fmt.Println(nr, i.ID, i.Fragments, i.Fields["html"])
+		fmt.Println(post)
+		results = append(results, post)
 	}
+	return results
 }

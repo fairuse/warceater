@@ -17,6 +17,8 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/fairuse/warceater/pkg/forum"
+	"html/template"
 
 	"github.com/foolin/goview/supports/ginview"
 	"github.com/gin-gonic/gin"
@@ -24,7 +26,36 @@ import (
 	"net/http"
 )
 
+type SearchController struct {
+	idx *forum.Indexer
+}
+
+func makeUnsafe(s string) template.HTML {
+	return template.HTML(s)
+}
+
+func (s *SearchController) handleSearch(ctx *gin.Context) {
+	ctx.Request.ParseForm()
+	for key, value := range ctx.Request.PostForm {
+		fmt.Println(key, value)
+	}
+	results := s.idx.Search(ctx.Request.PostFormValue("query"))
+	ctx.HTML(http.StatusOK, "index", gin.H{
+		"title": "Index title! with search for",
+		"add": func(a int, b int) int {
+			return a + b
+		},
+		"results":    results,
+		"makeUnsafe": makeUnsafe,
+	})
+}
+
 func serve() {
+	fi := forum.NewForumIndex(indexPath)
+	defer fi.Close()
+
+	srv := SearchController{idx: fi}
+
 	router := gin.Default()
 
 	//new template engine
@@ -40,18 +71,7 @@ func serve() {
 		})
 	})
 
-	router.POST("/search", func(ctx *gin.Context) {
-		ctx.Request.ParseForm()
-		for key, value := range ctx.Request.PostForm {
-			fmt.Println(key, value)
-		}
-		ctx.HTML(http.StatusOK, "index", gin.H{
-			"title": "Index title! with search for",
-			"add": func(a int, b int) int {
-				return a + b
-			},
-		})
-	})
+	router.POST("/search", srv.handleSearch)
 
 	//	router.GET("/page", func(ctx *gin.Context) {
 	//		//render only file, must full name with extension

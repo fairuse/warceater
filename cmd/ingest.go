@@ -51,7 +51,7 @@ func testDict() {
 	defer cd.Release()
 }
 
-func testBody(r *http.Response, uri string) ([]forum.Body, error) {
+func testBody(r *http.Response, uri string) ([]forum.Post, error) {
 	sanitizer := bluemonday.UGCPolicy()
 
 	ctype := r.Header.Get("content-type")
@@ -67,7 +67,7 @@ func testBody(r *http.Response, uri string) ([]forum.Body, error) {
 
 	doc := goquery.NewDocumentFromNode(root) // not sure where to pass URI.. the internal constructor supports it, but it is not available to us
 
-	bodies := make([]forum.Body, 0)
+	bodies := make([]forum.Post, 0)
 
 	doc.Find(".content-border").Each(func(i int, s *goquery.Selection) {
 		// For each item found, get the band and title
@@ -83,7 +83,7 @@ func testBody(r *http.Response, uri string) ([]forum.Body, error) {
 		sanehtml := sanitizer.Sanitize(ohtml)
 		if len(msg) > 0 {
 			// fmt.Printf("Post %s [%d]: %s : %s - %s\n", id, i, user, len(hdr), len(msg))
-			x := forum.Body{Hdr: hdr, Msg: msg, User: user, Id: id, UserIcon: userIconUri, Html: sanehtml}
+			x := forum.Post{Hdr: hdr, Msg: msg, User: user, Id: id, UserIcon: userIconUri, Html: sanehtml}
 			bodies = append(bodies, x)
 			//fmt.Println("test HTML:", ohtml)
 			//fmt.Println("sane HTML:", sanehtml)
@@ -147,8 +147,8 @@ func testWarc(filename string) {
 			}
 			fi.TestIndex(bodies)
 			/*
-				content, err := ioutil.ReadAll(response.Body)
-				response.Body.Close()
+				content, err := ioutil.ReadAll(response.Post)
+				response.Post.Close()
 
 				if err != nil {
 					log.Println("failed to interpret response body", err, "read",len(content),"bytes, while content was",len(content),"bytes")

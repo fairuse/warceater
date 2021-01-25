@@ -31,7 +31,7 @@ The bleve search syntax can be used, see https://blevesearch.com/docs/Query-Stri
 	Run: func(cmd *cobra.Command, args []string) {
 		fi := forum.NewForumIndex(indexPath)
 		qry := strings.Join(args, " ")
-		fi.Search(qry)
+		_ = fi.Search(qry)
 	},
 }
 
