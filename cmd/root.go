@@ -52,7 +52,6 @@ func Execute() {
 	}
 }
 
-
 func init() {
 	cobra.OnInitialize(initConfig)
 

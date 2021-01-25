@@ -14,6 +14,7 @@ type Indexer struct {
 func NewForumIndex(path string) *Indexer {
 	mapping := bleve.NewIndexMapping()
 	docmap := bleve.NewDocumentMapping()
+	// store&index everything by default, except for post.html, which should only be stored
 	storeOnlyMapping := bleve.NewTextFieldMapping()
 	storeOnlyMapping.Index = false // do not index, but do store
 	docmap.AddFieldMappingsAt("html", storeOnlyMapping)
@@ -58,7 +59,7 @@ func (f *Indexer) TestIndex(bodies []Body) {
 }
 
 func (f *Indexer) Search(query string) {
-	fmt.Println("query string:",query)
+	fmt.Println("query string:", query)
 	q := bleve.NewQueryStringQuery(query)
 
 	searchRequest := bleve.NewSearchRequest(q)

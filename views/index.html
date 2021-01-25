@@ -7,6 +7,12 @@
 
 
 {{define "content"}}
+<form method="POST" action="/search">
+<div class="has-icon-left">
+  <input type="text" class="form-input" placeholder="Search post content" name="query">
+  <i class="form-icon icon icon-search"></i>
+</div>
+</form>
     <h1 class="hello">This is content!!!!</h1>
     <p>123 + 333 = {{call $.add 123 333}}</p>
     <hr>

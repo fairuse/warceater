@@ -1,15 +1,30 @@
-<!-- /views/admin/master.html -->
 <!doctype html>
+<html lang="en">
+<head>
+    <title>{{.title}}</title>
+    {{template "head" .}}
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre-exp.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre-icons.min.css">
+</head>
 
-<html>
-    <head>
-        <title>{{.title}}</title>
-        {{template "head" .}}
-    </head>
+<body>
+<div class="container">
+    <header class="navbar">
+        <section class="navbar-section">
+            <a href="#TODO" class="navbar-brand mr-2">WARCeater</a>
+            <a href="#TODO" class="btn btn-link">Docs</a>
+            <a href="#TODO" class="btn btn-link">GitHub</a>
+        </section>
+    </header>
 
-    <body>
+    <div class="section">
         {{template "content" .}}
-        <hr>
+    </div>
+    <div class="section bg-gray">
         {{include "layouts/footer"}}
-    </body>
+    </div>
+</div>
+</body>
 </html>

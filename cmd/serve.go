@@ -18,9 +18,9 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/spf13/cobra"
 	"github.com/foolin/goview/supports/ginview"
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/cobra"
 	"net/http"
 )
 
@@ -40,10 +40,23 @@ func serve() {
 		})
 	})
 
-//	router.GET("/page", func(ctx *gin.Context) {
-//		//render only file, must full name with extension
-//		ctx.HTML(http.StatusOK, "page.html", gin.H{"title": "Page file title!!"})
-//	})
+	router.POST("/search", func(ctx *gin.Context) {
+		ctx.Request.ParseForm()
+		for key, value := range ctx.Request.PostForm {
+			fmt.Println(key, value)
+		}
+		ctx.HTML(http.StatusOK, "index", gin.H{
+			"title": "Index title! with search for",
+			"add": func(a int, b int) int {
+				return a + b
+			},
+		})
+	})
+
+	//	router.GET("/page", func(ctx *gin.Context) {
+	//		//render only file, must full name with extension
+	//		ctx.HTML(http.StatusOK, "page.html", gin.H{"title": "Page file title!!"})
+	//	})
 
 	router.Run(":9090")
 }
