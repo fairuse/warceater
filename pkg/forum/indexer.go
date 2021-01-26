@@ -61,7 +61,7 @@ func (f *Indexer) TestIndex(bodies []Post) {
 	}
 }
 
-func (f *Indexer) Search(query string) (results []SearchResult) {
+func (f *Indexer) Search(query string) (response SearchResponse) {
 	fmt.Println("query string:", query)
 	q := bleve.NewQueryStringQuery(query)
 
@@ -74,7 +74,7 @@ func (f *Indexer) Search(query string) (results []SearchResult) {
 	fmt.Println("search took", searchResult.Took)
 	fmt.Println(searchResult.Total, "documents found")
 
-	results = make([]SearchResult, 0)
+	results := make([]SearchResult, 0)
 
 	for nr, i := range searchResult.Hits {
 		bytes, err := json.Marshal(i.Fields)
@@ -98,5 +98,9 @@ func (f *Indexer) Search(query string) (results []SearchResult) {
 		fmt.Println(post)
 		results = append(results, post)
 	}
-	return results
+	return SearchResponse{
+		Results:     results,
+		TimeSeconds: searchResult.Took.Seconds(),
+		ResultCount: searchResult.Total,
+	}
 }

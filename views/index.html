@@ -20,6 +20,9 @@
 </form>
 
 <div class="column col-8 col-mx-auto">
+    Searched for "{{.query}}", found {{.resultCount}} results in {{.searchTime}} seconds.
+</div>
+<div class="column col-8 col-mx-auto">
     {{range .results}}
     <div class="divider"></div>
     <div class="tile bg-gray p-2">

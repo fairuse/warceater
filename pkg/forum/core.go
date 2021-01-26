@@ -10,6 +10,11 @@ type Post struct {
 	Msg      string `json:"msg"`
 	Html     string `json:"html"`
 }
+type SearchResponse struct {
+	Results     []SearchResult
+	TimeSeconds float64
+	ResultCount uint64
+}
 
 type SearchResult struct {
 	Id         string                   `json:"id"`

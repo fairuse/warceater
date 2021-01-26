@@ -21,6 +21,7 @@ import (
 	"html/template"
 
 	"github.com/foolin/goview/supports/ginview"
+	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
 	"net/http"
@@ -39,14 +40,18 @@ func (s *SearchController) handleSearch(ctx *gin.Context) {
 	for key, value := range ctx.Request.PostForm {
 		fmt.Println(key, value)
 	}
-	results := s.idx.Search(ctx.Request.PostFormValue("query"))
+	query := ctx.Request.PostFormValue("query")
+	response := s.idx.Search(query)
 	ctx.HTML(http.StatusOK, "index", gin.H{
-		"title": "Index title! with search for",
+		"title": "WARCeater 0.0",
 		"add": func(a int, b int) int {
 			return a + b
 		},
-		"results":    results,
-		"makeUnsafe": makeUnsafe,
+		"results":     response.Results,
+		"makeUnsafe":  makeUnsafe,
+		"query":       query,
+		"resultCount": response.ResultCount,
+		"searchTime":  response.TimeSeconds,
 	})
 }
 
@@ -57,6 +62,8 @@ func serve() {
 	srv := SearchController{idx: fi}
 
 	router := gin.Default()
+
+	router.Use(static.Serve("/", static.LocalFile("./static", false)))
 
 	//new template engine
 	router.HTMLRender = ginview.Default()
