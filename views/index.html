@@ -22,7 +22,7 @@
 <div class="column col-8 col-mx-auto">
     {{range .results}}
     <div class="divider"></div>
-    <div class="tile bg-gray">
+    <div class="tile bg-gray p-2">
         <div class="tile-icon">
             <figure class="avatar avatar-xl" data-initial="AP" style="background-color: #275929;"></figure>
         </div>
@@ -33,11 +33,21 @@
                 {{ $key }} : {{ $value }} <br/>
                 {{end}}
                 <br/>
-                {{.Html}}
+            <div class="accordion">
+                <input type="checkbox" id="accordion-{{ .Id }}" name="accordion-checkbox" hidden>
+                <label class="accordion-header" for="accordion-{{ .Id }}">
+                    <i class="icon icon-arrow-right mr-1"></i>
+                    Full Content
+                </label>
+                <div class="accordion-body">
+                    <!-- Accordions content -->
+                    {{.Html}}
+                </div>
+            </div>
             </p>
         </div>
         <div class="tile-action">
-            <button class="btn btn-link">Show Thread</button>
+            <button class="btn btn-link">Jump to Thread</button>
         </div>
 
     </div>

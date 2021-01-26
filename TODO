@@ -1,6 +1,7 @@
 V add the author to each post
 - extract two-leter abbreviations for each username
 - generate a random sensible color for each username
+- make change rules to the post html to reformat it into spectre-css classes (before sanitization). maybe store unsafe html instead and sanitize on retrieval
 - pass previous search string to index template so we can pre-fill the search box (and report the current search)
 - add a thread-id to each post
 - add a thread-seq to search post (integer id determining the sequence in the thread) (we can do thread page * 1000 + post_nr)
