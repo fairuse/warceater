@@ -31,23 +31,23 @@
         </div>
         <div class="tile-content">
             <p class="tile-title text-bold">{{.User}} - {{.Hdr}}</p>
-            <p class="tile-subtitle">
+            <div class="tile-subtitle">
                 {{range $key, $value := .Highlights}}
                 {{ $key }} : {{ $value }} <br/>
                 {{end}}
                 <br/>
-            <div class="accordion">
-                <input type="checkbox" id="accordion-{{ .Id }}" name="accordion-checkbox" hidden>
-                <label class="accordion-header" for="accordion-{{ .Id }}">
-                    <i class="icon icon-arrow-right mr-1"></i>
-                    Full Content
-                </label>
-                <div class="accordion-body">
-                    <!-- Accordions content -->
-                    {{.Html}}
+                <div class="accordion">
+                    <input type="checkbox" id="accordion-{{ .Id }}" name="accordion-checkbox" hidden>
+                    <label class="accordion-header" for="accordion-{{ .Id }}">
+                        <i class="icon icon-arrow-right mr-1"></i>
+                        Full Content
+                    </label>
+                    <div class="accordion-body">
+                        <!-- Accordions content -->
+                        {{.Html}}
+                    </div>
                 </div>
             </div>
-            </p>
         </div>
         <div class="tile-action">
             <button class="btn btn-link">Jump to Thread</button>

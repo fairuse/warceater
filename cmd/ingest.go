@@ -80,6 +80,7 @@ func testBody(r *http.Response, uri string) ([]forum.Post, error) {
 
 		_ = sanitizer
 		ohtml, _ := goquery.OuterHtml(s.Find(".post-message")) // todo handle error
+		// todo apply transformation rules to modify html (or store the unsanitized html instead, and sanitize on retrieval
 		sanehtml := sanitizer.Sanitize(ohtml)
 		if len(msg) > 0 {
 			// fmt.Printf("Post %s [%d]: %s : %s - %s\n", id, i, user, len(hdr), len(msg))
