@@ -27,9 +27,39 @@
     <div class="section">
         {{template "content" .}}
     </div>
-    <div class="section bg-gray">
+    <div class="section bg-dark">
         {{include "layouts/footer"}}
     </div>
 </div>
 </body>
 </html>
+
+{{define "searchresults"}}
+<div class="column col-8 col-mx-auto">
+    Searched for "{{.query}}", found {{.resultCount}} results in {{.searchTime}} seconds.
+</div>
+<div class="column col-8 col-mx-auto">
+    {{range .results}}
+    <div class="divider"></div>
+    <div class="tile bg-gray p-2">
+        <div class="tile-icon">
+            <figure class="avatar avatar-xl" data-initial="AP" style="background-color: #275929;"></figure>
+        </div>
+        <div class="tile-content">
+            <p class="tile-title text-bold">{{.User}} - {{.Hdr}}</p>
+            <div class="tile-subtitle text-break">
+                {{range $key, $value := .Highlights}}
+                {{ $key }} : {{ $value }} <br/>
+                {{end}}
+                <br/>
+                {{.Html}}
+            </div>
+        </div>
+        <div class="tile-action">
+            <button class="btn btn-link">Jump to Thread</button>
+        </div>
+
+    </div>
+    {{end}}
+</div>
+{{end}}
