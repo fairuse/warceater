@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"github.com/fairuse/warceater/pkg/forum"
 	"html/template"
+	"strconv"
 
 	"github.com/foolin/goview/supports/ginview"
 	"github.com/gin-contrib/static"
@@ -55,6 +56,27 @@ func (s *SearchController) handleSearch(ctx *gin.Context) {
 	})
 }
 
+func (s *SearchController) handleThread(ctx *gin.Context) {
+	threadIdStr := ctx.Param("threadid")
+	threadId, err := strconv.Atoi(threadIdStr)
+	fmt.Println("handleThread:", threadIdStr, threadId)
+	if err != nil {
+		return // TODO
+	}
+	response := s.idx.SearchThread(threadId)
+	ctx.HTML(http.StatusOK, "index", gin.H{
+		"title": "WARCeater 0.0",
+		"add": func(a int, b int) int {
+			return a + b
+		},
+		"results":     response.Results,
+		"makeUnsafe":  makeUnsafe,
+		"query":       "_THREAD_",
+		"resultCount": response.ResultCount,
+		"searchTime":  response.TimeSeconds,
+	})
+}
+
 func serve() {
 	fi := forum.NewForumIndex(indexPath)
 	defer fi.Close()
@@ -79,6 +101,7 @@ func serve() {
 	})
 
 	router.POST("/search", srv.handleSearch)
+	router.GET("/thread/:threadid", srv.handleThread)
 
 	//	router.GET("/page", func(ctx *gin.Context) {
 	//		//render only file, must full name with extension

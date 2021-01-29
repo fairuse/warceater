@@ -114,15 +114,18 @@ func (f *Indexer) Search(query query.Query) (response SearchResponse) {
 
 func (f *Indexer) SearchThread(threadId int) (response SearchResponse) {
 	//q := bleve.NewQueryStringQuery(query)
-	query := bleve.NewMatchQuery(fmt.Sprint(threadId))
+	tid := float64(threadId)
+	incl := true
+	query := bleve.NewNumericRangeInclusiveQuery(&tid, &tid, &incl, &incl)
 	query.SetField("threadid")
+	//	fmt.Println("searchThread",query.Match)
 
 	searchRequest := bleve.NewSearchRequest(query)
 	searchRequest.Fields = []string{"*"}
 	searchRequest.Size = 100
 	searchRequest.Sort = search.SortOrder{&search.SortField{
 		Field:   "threadpostid",
-		Desc:    true,
+		Desc:    false,
 		Type:    search.SortFieldAsNumber,
 		Mode:    search.SortFieldDefault,
 		Missing: search.SortFieldMissingLast,
@@ -140,6 +143,9 @@ func (f *Indexer) SearchByRequest(searchRequest *bleve.SearchRequest) SearchResp
 	results := make([]SearchResult, 0)
 
 	for _, i := range searchResult.Hits {
+		//if nr == 0 {
+		//	fmt.Println(i.Fields)
+		//}
 		bytes, err := json.Marshal(i.Fields)
 		if err != nil {
 

@@ -41,7 +41,7 @@
 <div class="column col-8 col-mx-auto">
     {{range .results}}
     <div class="divider"></div>
-    <div class="tile bg-gray p-2">
+    <div class="tile bg-gray p-2" id="{{ .Id }}">
         <div class="tile-icon">
             <figure class="avatar avatar-xl" data-initial="{{.Initials}}" style="background-color: {{.UserColor}};"></figure>
         </div>

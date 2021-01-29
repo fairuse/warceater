@@ -77,9 +77,11 @@ func testBody(r *http.Response, uri string) ([]forum.Post, error) {
 	pageSeq, err := strconv.Atoi(pageSeqStr)
 
 	if err != nil {
-		fmt.Println("failed to parse thread identifier for URL", uri)
-		fmt.Println(threadUrl.Query())
+		// fmt.Println("failed to parse thread identifier for URL", uri)
+		// fmt.Println(threadUrl.Query())
+		pageSeq = 1
 	}
+	//fmt.Println(threadUrl.Query())
 
 	doc := goquery.NewDocumentFromNode(root) // not sure where to pass URI.. the internal constructor supports it, but it is not available to us
 
