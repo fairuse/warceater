@@ -6,6 +6,7 @@ V add the author to each post
 - add a thread-id to each post
 - add a thread-seq to search post (integer id determining the sequence in the thread) (we can do thread page * 1000 + post_nr)
 V refactor indexer.Search method to return a searchResult array
+- clean up the post -> searchresult enrichtment (initial generation, colors) somewhere clean
 - refactor Search to use an internal method that accepts a bleve search
 - add indexer.Retrieve method to retrieve post contents for a single post?
 - add indexer.Thread() method to retrieve all posts for a given thread id (can just call Search?)

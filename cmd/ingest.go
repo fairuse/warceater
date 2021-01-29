@@ -27,7 +27,9 @@ import (
 	"golang.org/x/net/html"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -65,11 +67,21 @@ func testBody(r *http.Response, uri string) ([]forum.Post, error) {
 		return nil, err
 	}
 
+	// todo get threadId from the uri
+	url, err := url.Parse(uri)
+	// TODO: we have to build some logic that can either get the threadid from a query parameter, or from a part of the url
+	threadIdStr := url.Query().Get("t") // todo <- customizability
+	threadId, err := strconv.Atoi(threadIdStr)
+	if err != nil {
+		fmt.Println("failed to parse thread identifier for URL", uri)
+		fmt.Println(url.Query())
+	}
+
 	doc := goquery.NewDocumentFromNode(root) // not sure where to pass URI.. the internal constructor supports it, but it is not available to us
 
 	bodies := make([]forum.Post, 0)
 
-	doc.Find(".content-border").Each(func(i int, s *goquery.Selection) {
+	doc.Find(".content-border").Each(func(postNr int, s *goquery.Selection) {
 		// For each item found, get the band and title
 		id, _ := s.Attr("id")
 		user := s.Find(".post-user").Text()
@@ -83,8 +95,19 @@ func testBody(r *http.Response, uri string) ([]forum.Post, error) {
 		// todo apply transformation rules to modify html (or store the unsanitized html instead, and sanitize on retrieval
 		sanehtml := sanitizer.Sanitize(ohtml)
 		if len(msg) > 0 {
-			// fmt.Printf("Post %s [%d]: %s : %s - %s\n", id, i, user, len(hdr), len(msg))
-			x := forum.Post{Hdr: hdr, Msg: msg, User: user, Id: id, UserIcon: userIconUri, Html: sanehtml}
+			// fmt.Printf("Post %s [%d]: %s : %s - %s\n", id, postNr, user, len(hdr), len(msg))
+			x := forum.Post{
+				Url:          uri,
+				ThreadId:     threadId,
+				PostSeq:      postNr,
+				ThreadPostId: 0,
+				Id:           id,
+				User:         user,
+				UserIcon:     userIconUri,
+				Hdr:          hdr,
+				Msg:          msg,
+				Html:         sanehtml,
+			}
 			bodies = append(bodies, x)
 			//fmt.Println("test HTML:", ohtml)
 			//fmt.Println("sane HTML:", sanehtml)

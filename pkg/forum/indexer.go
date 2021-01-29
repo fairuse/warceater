@@ -1,6 +1,8 @@
 package forum
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/blevesearch/bleve/v2"
@@ -38,7 +40,7 @@ func (f *Indexer) AddBody(id string, b Post) {
 	}
 	f.count++
 	f.batch.Index(id, b)
-	if f.batch.TotalDocsSize() > 100*1024*124 {
+	if f.batch.TotalDocsSize() > 4*1024*1024*124 {
 		fmt.Println("flushing search index batch of size", f.batch.TotalDocsSize(), "(", f.count, "total posts seen)")
 		f.idx.Batch(f.batch)
 		f.batch = nil
@@ -61,6 +63,30 @@ func (f *Indexer) TestIndex(bodies []Post) {
 	}
 }
 
+// NOTE: this isn't multi-Unicode-codepoint aware, like specifying skintone or
+//       gender of an emoji: https://unicode.org/emoji/charts/full-emoji-modifiers.html
+func substr(input string, start int, length int) string {
+	asRunes := []rune(input)
+
+	if start >= len(asRunes) {
+		return ""
+	}
+
+	if start+length > len(asRunes) {
+		length = len(asRunes) - start
+	}
+
+	return string(asRunes[start : start+length])
+}
+
+// quick trick to convert a name or string into a random (but consistent) RGB HTML color string in the #000000 format
+func makeUniqueColor(s string) string {
+	h := sha1.New()
+	h.Write([]byte(s))
+	bs := h.Sum(nil)
+	return "#" + hex.EncodeToString(bs[0:3])
+}
+
 func (f *Indexer) Search(query string) (response SearchResponse) {
 	fmt.Println("query string:", query)
 	q := bleve.NewQueryStringQuery(query)
@@ -76,7 +102,7 @@ func (f *Indexer) Search(query string) (response SearchResponse) {
 
 	results := make([]SearchResult, 0)
 
-	for nr, i := range searchResult.Hits {
+	for _, i := range searchResult.Hits {
 		bytes, err := json.Marshal(i.Fields)
 		if err != nil {
 
@@ -86,6 +112,8 @@ func (f *Indexer) Search(query string) (response SearchResponse) {
 		if err != nil {
 
 		}
+		post.Initials = substr(strings.TrimSpace(post.User), 0, 2)
+		post.UserColor = makeUniqueColor(post.User)
 		post.Highlights = make(map[string]template.HTML)
 		for fieldname, fragment := range i.Fragments {
 			// TODO: this should not be indexed, only stored, but something is wrong so we have to filter it here
@@ -94,8 +122,8 @@ func (f *Indexer) Search(query string) (response SearchResponse) {
 			}
 			post.Highlights[fieldname] = template.HTML(strings.Join(fragment, " &hellip; "))
 		}
-		fmt.Println(nr, i.ID, i.Fragments, i.Fields["html"])
-		fmt.Println(post)
+		//fmt.Println(nr, i.ID, i.Fragments, i.Fields["html"])
+		//fmt.Println(post)
 		results = append(results, post)
 	}
 	return SearchResponse{
