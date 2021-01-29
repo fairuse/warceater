@@ -40,8 +40,8 @@ func (s *SearchController) handleSearch(ctx *gin.Context) {
 	for key, value := range ctx.Request.PostForm {
 		fmt.Println(key, value)
 	}
-	query := ctx.Request.PostFormValue("query")
-	response := s.idx.Search(query)
+	queryStr := ctx.Request.PostFormValue("query")
+	response := s.idx.SearchQueryString(queryStr)
 	ctx.HTML(http.StatusOK, "index", gin.H{
 		"title": "WARCeater 0.0",
 		"add": func(a int, b int) int {
@@ -49,7 +49,7 @@ func (s *SearchController) handleSearch(ctx *gin.Context) {
 		},
 		"results":     response.Results,
 		"makeUnsafe":  makeUnsafe,
-		"query":       query,
+		"query":       queryStr,
 		"resultCount": response.ResultCount,
 		"searchTime":  response.TimeSeconds,
 	})

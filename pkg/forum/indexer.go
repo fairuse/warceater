@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/blevesearch/bleve/v2"
+	"github.com/blevesearch/bleve/v2/search"
+	"github.com/blevesearch/bleve/v2/search/query"
 	"html/template"
 	"strings"
 )
@@ -87,14 +89,49 @@ func makeUniqueColor(s string) string {
 	return "#" + hex.EncodeToString(bs[0:3])
 }
 
-func (f *Indexer) Search(query string) (response SearchResponse) {
-	fmt.Println("query string:", query)
-	q := bleve.NewQueryStringQuery(query)
+func (f *Indexer) SearchQueryString(q string) SearchResponse {
+	query := bleve.NewQueryStringQuery(q)
+	return f.Search(query)
+}
 
-	searchRequest := bleve.NewSearchRequest(q)
+func (f *Indexer) Search(query query.Query) (response SearchResponse) {
+	fmt.Println("query string:", query)
+	//q := bleve.NewQueryStringQuery(query)
+
+	searchRequest := bleve.NewSearchRequest(query)
 	searchRequest.Fields = []string{"*"}
 	searchRequest.Size = 100
+	//searchRequest.Sort = search.SortOrder{&search.SortField{
+	//	Field:   "threadpostid",
+	//	Desc:    true,
+	//	Type:    search.SortFieldAsNumber,
+	//	Mode:    search.SortFieldDefault,
+	//	Missing: search.SortFieldMissingLast,
+	//}}
 	searchRequest.Highlight = bleve.NewHighlight() // WithStyle("ansi")
+	return f.SearchByRequest(searchRequest)
+}
+
+func (f *Indexer) SearchThread(threadId int) (response SearchResponse) {
+	//q := bleve.NewQueryStringQuery(query)
+	query := bleve.NewMatchQuery(fmt.Sprint(threadId))
+	query.SetField("threadid")
+
+	searchRequest := bleve.NewSearchRequest(query)
+	searchRequest.Fields = []string{"*"}
+	searchRequest.Size = 100
+	searchRequest.Sort = search.SortOrder{&search.SortField{
+		Field:   "threadpostid",
+		Desc:    true,
+		Type:    search.SortFieldAsNumber,
+		Mode:    search.SortFieldDefault,
+		Missing: search.SortFieldMissingLast,
+	}}
+	// searchRequest.Highlight = bleve.NewHighlight() // WithStyle("ansi")
+	return f.SearchByRequest(searchRequest)
+}
+
+func (f *Indexer) SearchByRequest(searchRequest *bleve.SearchRequest) SearchResponse {
 	searchResult, _ := f.idx.Search(searchRequest)
 
 	fmt.Println("search took", searchResult.Took)

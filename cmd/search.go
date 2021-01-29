@@ -30,8 +30,9 @@ var searchCmd = &cobra.Command{
 The bleve search syntax can be used, see https://blevesearch.com/docs/Query-String-Query/`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fi := forum.NewForumIndex(indexPath)
-		qry := strings.Join(args, " ")
-		_ = fi.Search(qry)
+		queryStr := strings.Join(args, " ")
+
+		_ = fi.SearchQueryString(queryStr)
 	},
 }
 
