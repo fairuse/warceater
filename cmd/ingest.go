@@ -68,13 +68,13 @@ func testBody(r *http.Response, uri string) ([]forum.Post, error) {
 	}
 
 	// todo get threadId from the uri
-	url, err := url.Parse(uri)
-	// TODO: we have to build some logic that can either get the threadid from a query parameter, or from a part of the url
-	threadIdStr := url.Query().Get("t") // todo <- customizability
+	threadUrl, err := url.Parse(uri)
+	// TODO: we have to build some logic that can either get the threadid from a query parameter, or from a part of the threadUrl
+	threadIdStr := threadUrl.Query().Get("t") // todo <- customizability
 	threadId, err := strconv.Atoi(threadIdStr)
 	if err != nil {
 		fmt.Println("failed to parse thread identifier for URL", uri)
-		fmt.Println(url.Query())
+		fmt.Println(threadUrl.Query())
 	}
 
 	doc := goquery.NewDocumentFromNode(root) // not sure where to pass URI.. the internal constructor supports it, but it is not available to us
