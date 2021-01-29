@@ -5,8 +5,9 @@ import "html/template"
 type Post struct {
 	Url          string `json:"url"`
 	ThreadId     int    `json:"threadid"`     // thead identifier, same for all posts in a thread
-	PostSeq      int    `json:"threadseq"`    // post identifier, sequential in order within a thread
-	ThreadPostId int64  `json:"threadpostid"` // combined key, uniquely identifies a thread+post id
+	PostSeq      int    `json:"threadseq"`    // post identifier, sequential in order within a thread page
+	PageSeq      int    `json:"pageseq"`      // page (of thread) id, ordered
+	ThreadPostId int64  `json:"threadpostid"` // combined key, uniquely identifies a thread+post id, ordered
 	Id           string `json:"id"`           // original post key (identifies a post)
 	User         string `json:"user"`
 	UserIcon     string `json:"usericon"`
@@ -23,7 +24,8 @@ type SearchResponse struct {
 type SearchResult struct {
 	Url          string                   `json:"url"`
 	ThreadId     int                      `json:"threadid"`     // thead identifier, same for all posts in a thread
-	PostSeq      int                      `json:"threadseq"`    // post identifier, sequential in order within a thread
+	PostSeq      int                      `json:"threadseq"`    // post identifier, sequential in order within a thread page
+	PageSeq      int                      `json:"pageseq"`      // page (of thread) id, ordered
 	ThreadPostId int64                    `json:"threadpostid"` // combined key, uniquely identifies a thread+post id
 	Id           string                   `json:"id"`
 	User         string                   `json:"user"`

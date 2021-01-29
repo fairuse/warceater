@@ -72,6 +72,10 @@ func testBody(r *http.Response, uri string) ([]forum.Post, error) {
 	// TODO: we have to build some logic that can either get the threadid from a query parameter, or from a part of the threadUrl
 	threadIdStr := threadUrl.Query().Get("t") // todo <- customizability
 	threadId, err := strconv.Atoi(threadIdStr)
+
+	pageSeqStr := threadUrl.Query().Get("page")
+	pageSeq, err := strconv.Atoi(pageSeqStr)
+
 	if err != nil {
 		fmt.Println("failed to parse thread identifier for URL", uri)
 		fmt.Println(threadUrl.Query())
@@ -99,8 +103,9 @@ func testBody(r *http.Response, uri string) ([]forum.Post, error) {
 			x := forum.Post{
 				Url:          uri,
 				ThreadId:     threadId,
+				PageSeq:      pageSeq,
 				PostSeq:      postNr,
-				ThreadPostId: 0,
+				ThreadPostId: int64(pageSeq)*1000 + int64(postNr),
 				Id:           id,
 				User:         user,
 				UserIcon:     userIconUri,
