@@ -1,7 +1,10 @@
 package forum
 
-import "net/http"
+import (
+	"io"
+	"net/http"
+)
 
 type Parser interface {
-	ParseResponse(r *http.Response, uri string) ([]Post, error)
+	ParseResponse(body io.ReadCloser, header http.Header, uri string) ([]Post, error)
 }

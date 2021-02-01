@@ -94,7 +94,7 @@ func loadWarc(filename string, parser forum.Parser) {
 				continue
 			}
 			uri := record.Header.Get("warc-target-uri")
-			bodies, err := parser.ParseResponse(response, uri)
+			bodies, err := parser.ParseResponse(response.Body, response.Header, uri)
 			if err != nil {
 				log.Println("failed to interprset response body", err)
 				continue

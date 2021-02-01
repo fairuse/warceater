@@ -6,6 +6,7 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/fairuse/warceater/pkg/forum"
 	"golang.org/x/net/html"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -17,15 +18,15 @@ type LeagueForumParser struct {
 	// some space for parser specific data here
 }
 
-func (fp *LeagueForumParser) ParseResponse(r *http.Response, uri string) ([]forum.Post, error) {
+func (fp *LeagueForumParser) ParseResponse(body io.ReadCloser, header http.Header, uri string) ([]forum.Post, error) {
 	sanitizer := bluemonday.UGCPolicy()
 
-	ctype := r.Header.Get("content-type")
+	ctype := header.Get("content-type")
 	if !strings.HasPrefix(ctype, "text/html") {
 		return nil, fmt.Errorf("not text/html")
 	}
 
-	root, err := html.Parse(r.Body)
+	root, err := html.Parse(body)
 	if err != nil {
 		log.Println("error parsing response body", err)
 		return nil, err
