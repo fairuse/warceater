@@ -19,20 +19,14 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/CorentinB/warc"
-	"github.com/PuerkitoBio/goquery"
 	"github.com/cheggaaa/pb/v3"
-	"github.com/microcosm-cc/bluemonday"
+	"github.com/spf13/cobra"
 	"github.com/valyala/gozstd"
 	"github.com/fairuse/warceater/pkg/forum"
-	"golang.org/x/net/html"
+	"github.com/fairuse/warceater/pkg/parsers"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
-	"strconv"
-	"strings"
-
-	"github.com/spf13/cobra"
 )
 
 func testDict() {
@@ -53,78 +47,7 @@ func testDict() {
 	defer cd.Release()
 }
 
-func testBody(r *http.Response, uri string) ([]forum.Post, error) {
-	sanitizer := bluemonday.UGCPolicy()
-
-	ctype := r.Header.Get("content-type")
-	if !strings.HasPrefix(ctype, "text/html") {
-		return nil, fmt.Errorf("not text/html")
-	}
-
-	root, err := html.Parse(r.Body)
-	if err != nil {
-		log.Println("error parsing response body", err)
-		return nil, err
-	}
-
-	// todo get threadId from the uri
-	threadUrl, err := url.Parse(uri)
-	// TODO: we have to build some logic that can either get the threadid from a query parameter, or from a part of the threadUrl
-	threadIdStr := threadUrl.Query().Get("t") // todo <- customizability
-	threadId, err := strconv.Atoi(threadIdStr)
-
-	pageSeqStr := threadUrl.Query().Get("page")
-	pageSeq, err := strconv.Atoi(pageSeqStr)
-
-	if err != nil {
-		// fmt.Println("failed to parse thread identifier for URL", uri)
-		// fmt.Println(threadUrl.Query())
-		pageSeq = 1
-	}
-	//fmt.Println(threadUrl.Query())
-
-	doc := goquery.NewDocumentFromNode(root) // not sure where to pass URI.. the internal constructor supports it, but it is not available to us
-
-	bodies := make([]forum.Post, 0)
-
-	doc.Find(".content-border").Each(func(postNr int, s *goquery.Selection) {
-		// For each item found, get the band and title
-		id, _ := s.Attr("id")
-		user := s.Find(".post-user").Text()
-		msg := s.Find(".post-message").Text()
-		hdr := s.Find(".post-header").Text()
-		userIconUri, _ := s.Find(".post-avatar").Find(".avatar").Find("img").Attr("src")
-		// fmt.Println(userIconUri, ok)
-
-		_ = sanitizer
-		ohtml, _ := goquery.OuterHtml(s.Find(".post-message")) // todo handle error
-		// todo apply transformation rules to modify html (or store the unsanitized html instead, and sanitize on retrieval
-		sanehtml := sanitizer.Sanitize(ohtml)
-		if len(msg) > 0 {
-			// fmt.Printf("Post %s [%d]: %s : %s - %s\n", id, postNr, user, len(hdr), len(msg))
-			x := forum.Post{
-				Url:          uri,
-				ThreadId:     threadId,
-				PageSeq:      pageSeq,
-				PostSeq:      postNr,
-				ThreadPostId: int64(pageSeq)*1000 + int64(postNr),
-				Id:           id,
-				User:         user,
-				UserIcon:     userIconUri,
-				Hdr:          hdr,
-				Msg:          msg,
-				Html:         sanehtml,
-			}
-			bodies = append(bodies, x)
-			//fmt.Println("test HTML:", ohtml)
-			//fmt.Println("sane HTML:", sanehtml)
-
-		}
-	})
-	return bodies, nil
-}
-
-func testWarc(filename string) {
+func loadWarc(filename string, parser forum.Parser) {
 
 	fi := forum.NewForumIndex(indexPath)
 	defer fi.Close()
@@ -171,7 +94,7 @@ func testWarc(filename string) {
 				continue
 			}
 			uri := record.Header.Get("warc-target-uri")
-			bodies, err := testBody(response, uri)
+			bodies, err := parser.ParseResponse(response, uri)
 			if err != nil {
 				log.Println("failed to interprset response body", err)
 				continue
@@ -188,7 +111,7 @@ func testWarc(filename string) {
 				ctype := response.Header.Get("content-type")
 				if strings.HasPrefix(ctype, "text/html") {
 					fmt.Println(record.Header.Get("warc-target-uri"), rectype, ctype, len(content) )
-					testBody(string(content)) // note, we do not handle any content encoding yet!
+					parseResponse(string(content)) // note, we do not handle any content encoding yet!
 				}
 				_ = content
 			*/
@@ -211,8 +134,9 @@ index. This can be a time-consuming operation.`,
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
+		p := parsers.LeagueForumParser{}
 		for _, filename := range args {
-			testWarc(filename)
+			loadWarc(filename, &p)
 		}
 	},
 }
