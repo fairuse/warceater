@@ -36,7 +36,7 @@ func NewForumIndex(path string) *Indexer {
 	return &Indexer{idx: index}
 }
 
-func (f *Indexer) AddBody(id string, b Post) {
+func (f *Indexer) AddPost(id string, b Post) {
 	if f.batch == nil {
 		f.batch = f.idx.NewBatch()
 	}
@@ -58,9 +58,9 @@ func (f *Indexer) Close() {
 	fmt.Println("indexed", f.count, "posts")
 }
 
-func (f *Indexer) TestIndex(bodies []Post) {
-	for _, body := range bodies {
-		f.AddBody(body.Id, body)
+func (f *Indexer) AddPosts(posts []Post) {
+	for _, body := range posts {
+		f.AddPost(body.Id, body)
 		//  f.idx.Index("test", body)
 	}
 }

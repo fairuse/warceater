@@ -94,28 +94,14 @@ func loadWarc(filename string, parser forum.Parser) {
 				continue
 			}
 			uri := record.Header.Get("warc-target-uri")
+			//_, _ = ioutil.ReadAll(response.Body)
+			//_ = uri
 			bodies, err := parser.ParseResponse(response.Body, response.Header, uri)
 			if err != nil {
-				log.Println("failed to interprset response body", err)
+				log.Println("failed to interpret response body", err)
 				continue
 			}
-			fi.TestIndex(bodies)
-			/*
-				content, err := ioutil.ReadAll(response.Post)
-				response.Post.Close()
-
-				if err != nil {
-					log.Println("failed to interpret response body", err, "read",len(content),"bytes, while content was",len(content),"bytes")
-					continue
-				}
-				ctype := response.Header.Get("content-type")
-				if strings.HasPrefix(ctype, "text/html") {
-					fmt.Println(record.Header.Get("warc-target-uri"), rectype, ctype, len(content) )
-					parseResponse(string(content)) // note, we do not handle any content encoding yet!
-				}
-				_ = content
-			*/
-			//println(string(content))
+			fi.AddPosts(bodies)
 		}
 	}
 	bar.Finish()
