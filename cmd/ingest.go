@@ -27,6 +27,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
 )
 
 func testDict() {
@@ -48,6 +49,11 @@ func testDict() {
 }
 
 func loadWarc(filename string, parser forum.Parser) {
+	workerWaiter := &sync.WaitGroup{}
+	indexWaiter := &sync.WaitGroup{}
+
+	bodyStream := make(chan forum.ParserBody)
+	postsStream := make(chan []forum.Post)
 
 	fi := forum.NewForumIndex(indexPath)
 	defer fi.Close()
@@ -64,6 +70,30 @@ func loadWarc(filename string, parser forum.Parser) {
 	r, err := warc.NewReader(barReader)
 	if err != nil {
 		panic(err)
+	}
+
+	indexWaiter.Add(1)
+	go func() {
+		for posts := range postsStream {
+			fi.AddPosts(posts)
+		}
+		indexWaiter.Done()
+	}()
+
+	const workerCount = 4
+	workerWaiter.Add(workerCount)
+	for nr := 0; nr < workerCount; nr++ {
+		go func() {
+			for body := range bodyStream {
+				posts, err := parser.ParseResponse(body.Body, body.Header, body.Uri)
+				if err != nil {
+					log.Println("[", nr, "] failed to interpret response body", err)
+					continue
+				}
+				postsStream <- posts
+			}
+			workerWaiter.Done()
+		}()
 	}
 
 	defer r.Close()
@@ -96,14 +126,24 @@ func loadWarc(filename string, parser forum.Parser) {
 			uri := record.Header.Get("warc-target-uri")
 			//_, _ = ioutil.ReadAll(response.Body)
 			//_ = uri
-			bodies, err := parser.ParseResponse(response.Body, response.Header, uri)
-			if err != nil {
-				log.Println("failed to interpret response body", err)
-				continue
+			body := forum.ParserBody{
+				Body:   response.Body,
+				Header: response.Header,
+				Uri:    uri,
 			}
-			fi.AddPosts(bodies)
+			bodyStream <- body
+			//bodies, err := parser.ParseResponse(response.Body, response.Header, uri)
+			//if err != nil {
+			//	log.Println("failed to interpret response body", err)
+			//	continue
+			//}
+			//fi.AddPosts(bodies)
 		}
 	}
+	close(bodyStream)
+	workerWaiter.Wait()
+	close(postsStream)
+	indexWaiter.Wait()
 	bar.Finish()
 }
 
