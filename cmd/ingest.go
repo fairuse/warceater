@@ -83,17 +83,17 @@ func loadWarc(filename string, parser forum.Parser) {
 	const workerCount = 4
 	workerWaiter.Add(workerCount)
 	for nr := 0; nr < workerCount; nr++ {
-		go func() {
+		go func(threadNr int) {
 			for body := range bodyStream {
 				posts, err := parser.ParseResponse(body.Body, body.Header, body.Uri)
 				if err != nil {
-					log.Println("[", nr, "] failed to interpret response body", err)
+					log.Println("[", threadNr, "] failed to interpret response body", err)
 					continue
 				}
 				postsStream <- posts
 			}
 			workerWaiter.Done()
-		}()
+		}(nr)
 	}
 
 	defer r.Close()
