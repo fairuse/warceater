@@ -42,7 +42,7 @@ func (f *Indexer) AddPost(id string, b Post) {
 	}
 	f.count++
 	f.batch.Index(id, b)
-	if f.batch.TotalDocsSize() > 4*1024*1024*124 {
+	if f.batch.TotalDocsSize() > 16*1024*1024 {
 		fmt.Println("flushing search index batch of size", f.batch.TotalDocsSize(), "(", f.count, "total posts seen)")
 		f.idx.Batch(f.batch)
 		f.batch = nil
