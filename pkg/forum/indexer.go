@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/blevesearch/bleve/v2"
+	"github.com/blevesearch/bleve/v2/index/scorch"
 	"github.com/blevesearch/bleve/v2/search"
 	"github.com/blevesearch/bleve/v2/search/query"
 	"html/template"
@@ -28,7 +29,8 @@ func NewForumIndex(path string) *Indexer {
 	mapping.AddDocumentMapping("post", docmap)
 	index, err := bleve.Open(path)
 	if err != nil {
-		index, err = bleve.New(path, mapping)
+		// index, err = bleve.New(path, mapping)
+		index, err = bleve.NewUsing(path, mapping, scorch.Name, scorch.Name, map[string]interface{}{"numSnapshotsToKeep": 0, "unsafe_batch": true})
 		if err != nil {
 			panic(err)
 		}

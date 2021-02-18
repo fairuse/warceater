@@ -27,6 +27,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime/pprof"
 	"sync"
 )
 
@@ -160,6 +161,15 @@ index. This can be a time-consuming operation.`,
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
+		if cpuProfile != "" {
+			f, err := os.Create(cpuProfile)
+			if err != nil {
+				panic(err)
+			}
+			pprof.StartCPUProfile(f)
+			fmt.Println("enabling CPU profiling, writing to",cpuProfile)
+			defer pprof.StopCPUProfile()
+		}
 		p := parsers.LeagueForumParser{}
 		for _, filename := range args {
 			loadWarc(filename, &p)

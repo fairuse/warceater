@@ -17,14 +17,14 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
-	"os"
-
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"os"
 )
 
 var cfgFile string
+var cpuProfile string
 var indexPath string
 
 // rootCmd represents the base command when called without any subcommands
@@ -60,7 +60,7 @@ func init() {
 	// will be global for your application.
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.warceater.yaml)")
-
+	rootCmd.PersistentFlags().StringVar(&cpuProfile, "cpuprofile","", "write cpu profile to file")
 	rootCmd.PersistentFlags().StringVar(&indexPath, "index", "example.bleve", "index file path (default is ./example.bleve")
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
