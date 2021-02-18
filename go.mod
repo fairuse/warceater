@@ -8,7 +8,7 @@ require (
 	github.com/RoaringBitmap/roaring v0.5.5 // indirect
 	github.com/andybalholm/cascadia v1.2.0 // indirect
 	github.com/blevesearch/bleve/v2 v2.0.2
-	github.com/blevesearch/scorch_segment_api v1.0.0 // indirect
+	github.com/blugelabs/bluge v0.1.5
 	github.com/cheggaaa/pb/v3 v3.0.6
 	github.com/fatih/color v1.10.0 // indirect
 	github.com/foolin/goview v0.3.0

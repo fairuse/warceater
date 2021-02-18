@@ -5,46 +5,77 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/blevesearch/bleve/v2"
-	"github.com/blevesearch/bleve/v2/index/scorch"
-	"github.com/blevesearch/bleve/v2/search"
-	"github.com/blevesearch/bleve/v2/search/query"
+	"github.com/blugelabs/bluge"
+	"github.com/blugelabs/bluge/index"
+	"github.com/blugelabs/bluge/search"
+	//"github.com/blevesearch/bleve/v2"
+	//"github.com/blevesearch/bleve/v2/index/scorch"
+	//"github.com/blevesearch/bleve/v2/search"
+	//"github.com/blevesearch/bleve/v2/search/query"
 	"html/template"
 	"strings"
 )
 
 type Indexer struct {
-	idx   bleve.Index
-	batch *bleve.Batch
+	idx   *bluge.Writer
+	batch *index.Batch
 	count int
 }
 
 func NewForumIndex(path string) *Indexer {
-	mapping := bleve.NewIndexMapping()
-	docmap := bleve.NewDocumentMapping()
+	//mapping := bluge.NewIndexMapping()
+	//docmap := bluge.NewDocumentMapping()
 	// store&index everything by default, except for post.html, which should only be stored
-	storeOnlyMapping := bleve.NewTextFieldMapping()
-	storeOnlyMapping.Index = false // do not index, but do store
-	docmap.AddFieldMappingsAt("html", storeOnlyMapping)
-	mapping.AddDocumentMapping("post", docmap)
-	index, err := bleve.Open(path)
+	//storeOnlyMapping := bluge.NewTextFieldMapping()
+	//storeOnlyMapping.Index = false // do not index, but do store
+	//docmap.AddFieldMappingsAt("html", storeOnlyMapping)
+	//mapping.AddDocumentMapping("post", docmap)
+	index, err := bluge.OpenWriter(bluge.DefaultConfig(path))
 	if err != nil {
-		// index, err = bleve.New(path, mapping)
-		index, err = bleve.NewUsing(path, mapping, scorch.Name, scorch.Name, map[string]interface{}{"numSnapshotsToKeep": 0, "unsafe_batch": true})
-		if err != nil {
-			panic(err)
-		}
+		// index, err = bluge.New(path, mapping)
+		//index, err = bluge.NewUsing(path, mapping, scorch.Name, scorch.Name, map[string]interface{}{"numSnapshotsToKeep": 0, "unsafe_batch": true})
+		//if err != nil {
+		panic(err)
+		//}
 	}
 	return &Indexer{idx: index}
 }
 
+func postToDocument(p Post) bluge.Document {
+	d := bluge.NewDocument(p.Id)
+
+	/*
+		Url          string `json:"url"`
+		ThreadId     int    `json:"threadid"`     // thead identifier, same for all posts in a thread
+		PostSeq      int    `json:"threadseq"`    // post identifier, sequential in order within a thread page
+		PageSeq      int    `json:"pageseq"`      // page (of thread) id, ordered
+		ThreadPostId int64  `json:"threadpostid"` // combined key, uniquely identifies a thread+post id, ordered
+		Id           string `json:"id"`           // original post key (identifies a post)
+		User         string `json:"user"`
+		UserIcon     string `json:"usericon"`
+		Hdr          string `json:"hdr"`
+		Msg          string `json:"msg"`
+		Html         string `json:"html"`
+	 */
+
+	// TODO complete this
+	d.AddField(bluge.NewTextField("url", p.Url))
+	d.AddField(bluge.NewNumericField("url", float64(p.ThreadId)))// NOTE: we have to switch to strings at some point.
+	d.AddField(bluge.NewTextField("hdr", p.Hdr))
+	d.AddField(bluge.NewTextField("hdr", p.Hdr))
+	d.AddField(bluge.NewTextField("hdr", p.Hdr))
+
+	return d
+}
+
 func (f *Indexer) AddPost(id string, b Post) {
 	if f.batch == nil {
-		f.batch = f.idx.NewBatch()
+		f.batch = bluge.NewBatch()
 	}
 	f.count++
-	f.batch.Index(id, b)
-	if f.batch.TotalDocsSize() > 16*1024*1024 {
+	// todo use id and b to construct a document!
+	f.batch.Insert(b)
+	if f.batch. > 16*1024*1024 {
 		fmt.Println("flushing search index batch of size", f.batch.TotalDocsSize(), "(", f.count, "total posts seen)")
 		f.idx.Batch(f.batch)
 		f.batch = nil
@@ -92,15 +123,15 @@ func makeUniqueColor(s string) string {
 }
 
 func (f *Indexer) SearchQueryString(q string) SearchResponse {
-	query := bleve.NewQueryStringQuery(q)
+	query := bluge.NewQueryStringQuery(q)
 	return f.Search(query)
 }
 
 func (f *Indexer) Search(query query.Query) (response SearchResponse) {
 	fmt.Println("query string:", query)
-	//q := bleve.NewQueryStringQuery(query)
+	//q := bluge.NewQueryStringQuery(query)
 
-	searchRequest := bleve.NewSearchRequest(query)
+	searchRequest := bluge.NewSearchRequest(query)
 	searchRequest.Fields = []string{"*"}
 	searchRequest.Size = 100
 	//searchRequest.Sort = search.SortOrder{&search.SortField{
@@ -110,19 +141,19 @@ func (f *Indexer) Search(query query.Query) (response SearchResponse) {
 	//	Mode:    search.SortFieldDefault,
 	//	Missing: search.SortFieldMissingLast,
 	//}}
-	searchRequest.Highlight = bleve.NewHighlight() // WithStyle("ansi")
+	searchRequest.Highlight = bluge.NewHighlight() // WithStyle("ansi")
 	return f.SearchByRequest(searchRequest)
 }
 
 func (f *Indexer) SearchThread(threadId int) (response SearchResponse) {
-	//q := bleve.NewQueryStringQuery(query)
+	//q := bluge.NewQueryStringQuery(query)
 	tid := float64(threadId)
 	incl := true
-	query := bleve.NewNumericRangeInclusiveQuery(&tid, &tid, &incl, &incl)
+	query := bluge.NewNumericRangeInclusiveQuery(&tid, &tid, &incl, &incl)
 	query.SetField("threadid")
 	//	fmt.Println("searchThread",query.Match)
 
-	searchRequest := bleve.NewSearchRequest(query)
+	searchRequest := bluge.NewSearchRequest(query)
 	searchRequest.Fields = []string{"*"}
 	searchRequest.Size = 100
 	searchRequest.Sort = search.SortOrder{&search.SortField{
@@ -132,11 +163,11 @@ func (f *Indexer) SearchThread(threadId int) (response SearchResponse) {
 		Mode:    search.SortFieldDefault,
 		Missing: search.SortFieldMissingLast,
 	}}
-	// searchRequest.Highlight = bleve.NewHighlight() // WithStyle("ansi")
+	// searchRequest.Highlight = bluge.NewHighlight() // WithStyle("ansi")
 	return f.SearchByRequest(searchRequest)
 }
 
-func (f *Indexer) SearchByRequest(searchRequest *bleve.SearchRequest) SearchResponse {
+func (f *Indexer) SearchByRequest(searchRequest *bluge.SearchRequest) SearchResponse {
 	searchResult, _ := f.idx.Search(searchRequest)
 
 	fmt.Println("search took", searchResult.Took)
