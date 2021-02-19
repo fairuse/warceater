@@ -1,25 +1,20 @@
 package forum
 
 import (
+	"context"
 	"crypto/sha1"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"github.com/blugelabs/bluge"
 	"github.com/blugelabs/bluge/index"
-	"github.com/blugelabs/bluge/search"
-	//"github.com/blevesearch/bleve/v2"
-	//"github.com/blevesearch/bleve/v2/index/scorch"
-	//"github.com/blevesearch/bleve/v2/search"
-	//"github.com/blevesearch/bleve/v2/search/query"
-	"html/template"
-	"strings"
+	"log"
 )
 
 type Indexer struct {
-	idx   *bluge.Writer
-	batch *index.Batch
-	count int
+	idx        *bluge.Writer
+	batch      *index.Batch
+	count      int
+	batchCount int
 }
 
 func NewForumIndex(path string) *Indexer {
@@ -41,7 +36,7 @@ func NewForumIndex(path string) *Indexer {
 	return &Indexer{idx: index}
 }
 
-func postToDocument(p Post) bluge.Document {
+func postToDocument(p Post) *bluge.Document {
 	d := bluge.NewDocument(p.Id)
 
 	/*
@@ -56,11 +51,11 @@ func postToDocument(p Post) bluge.Document {
 		Hdr          string `json:"hdr"`
 		Msg          string `json:"msg"`
 		Html         string `json:"html"`
-	 */
+	*/
 
 	// TODO complete this
 	d.AddField(bluge.NewTextField("url", p.Url))
-	d.AddField(bluge.NewNumericField("url", float64(p.ThreadId)))// NOTE: we have to switch to strings at some point.
+	d.AddField(bluge.NewNumericField("url", float64(p.ThreadId))) // NOTE: we have to switch to strings at some point.
 	d.AddField(bluge.NewTextField("hdr", p.Hdr))
 	d.AddField(bluge.NewTextField("hdr", p.Hdr))
 	d.AddField(bluge.NewTextField("hdr", p.Hdr))
@@ -71,14 +66,17 @@ func postToDocument(p Post) bluge.Document {
 func (f *Indexer) AddPost(id string, b Post) {
 	if f.batch == nil {
 		f.batch = bluge.NewBatch()
+		f.batchCount = 0
 	}
 	f.count++
 	// todo use id and b to construct a document!
-	f.batch.Insert(b)
-	if f.batch. > 16*1024*1024 {
-		fmt.Println("flushing search index batch of size", f.batch.TotalDocsSize(), "(", f.count, "total posts seen)")
+	doc := postToDocument(b)
+	f.batch.Insert(doc)
+	if f.batchCount > 10000 {
+		fmt.Println("flushing search index batch (", f.count, "total posts seen)")
 		f.idx.Batch(f.batch)
 		f.batch = nil
+		f.batchCount = 0
 	}
 }
 
@@ -123,17 +121,18 @@ func makeUniqueColor(s string) string {
 }
 
 func (f *Indexer) SearchQueryString(q string) SearchResponse {
-	query := bluge.NewQueryStringQuery(q)
+	query := bluge.NewMatchQuery(q)
 	return f.Search(query)
 }
 
-func (f *Indexer) Search(query query.Query) (response SearchResponse) {
+func (f *Indexer) Search(query bluge.Query) (response SearchResponse) {
 	fmt.Println("query string:", query)
 	//q := bluge.NewQueryStringQuery(query)
 
-	searchRequest := bluge.NewSearchRequest(query)
-	searchRequest.Fields = []string{"*"}
-	searchRequest.Size = 100
+	searchRequest := bluge.NewTopNSearch(100, query)
+	//	searchRequest.Fields = []string{"*"}
+	//	searchRequest.Size = 100
+
 	//searchRequest.Sort = search.SortOrder{&search.SortField{
 	//	Field:   "threadpostid",
 	//	Desc:    true,
@@ -141,70 +140,96 @@ func (f *Indexer) Search(query query.Query) (response SearchResponse) {
 	//	Mode:    search.SortFieldDefault,
 	//	Missing: search.SortFieldMissingLast,
 	//}}
-	searchRequest.Highlight = bluge.NewHighlight() // WithStyle("ansi")
+	// TODO check if we have a highlighter
+	// searchRequest.Highlight = bluge.NewHighlight() // WithStyle("ansi")
 	return f.SearchByRequest(searchRequest)
 }
 
 func (f *Indexer) SearchThread(threadId int) (response SearchResponse) {
 	//q := bluge.NewQueryStringQuery(query)
 	tid := float64(threadId)
-	incl := true
-	query := bluge.NewNumericRangeInclusiveQuery(&tid, &tid, &incl, &incl)
+	query := bluge.NewNumericRangeInclusiveQuery(tid, tid, true, true)
 	query.SetField("threadid")
 	//	fmt.Println("searchThread",query.Match)
 
-	searchRequest := bluge.NewSearchRequest(query)
-	searchRequest.Fields = []string{"*"}
-	searchRequest.Size = 100
-	searchRequest.Sort = search.SortOrder{&search.SortField{
-		Field:   "threadpostid",
-		Desc:    false,
-		Type:    search.SortFieldAsNumber,
-		Mode:    search.SortFieldDefault,
-		Missing: search.SortFieldMissingLast,
-	}}
+	searchRequest := bluge.NewTopNSearch(100, query)
+	searchRequest.SortBy([]string{"threadpostid"})
+	//searchRequest.Sort = search.SortOrder{&search.SortField{
+	//	Field:   "threadpostid",
+	//	Desc:    false,
+	//	Type:    search.SortFieldAsNumber,
+	//	Mode:    search.SortFieldDefault,
+	//	Missing: search.SortFieldMissingLast,
+	//}}
 	// searchRequest.Highlight = bluge.NewHighlight() // WithStyle("ansi")
 	return f.SearchByRequest(searchRequest)
 }
 
-func (f *Indexer) SearchByRequest(searchRequest *bluge.SearchRequest) SearchResponse {
-	searchResult, _ := f.idx.Search(searchRequest)
+func (f *Indexer) SearchByRequest(searchRequest bluge.SearchRequest) SearchResponse {
+	var reader bluge.Reader // TODO this still needs to be split off, put in the f struct, etc.
 
-	fmt.Println("search took", searchResult.Took)
-	fmt.Println(searchResult.Total, "documents found")
+	searchResult, err := reader.Search(context.Background(), searchRequest)
+	if err != nil {
+		// TODO: do something
+		return SearchResponse{}
+	}
+	// searchResult, _ := f.idx.Search(searchRequest)
 
 	results := make([]SearchResult, 0)
 
-	for _, i := range searchResult.Hits {
-		//if nr == 0 {
-		//	fmt.Println(i.Fields)
-		//}
-		bytes, err := json.Marshal(i.Fields)
-		if err != nil {
-
-		}
-		var post SearchResult
-		err = json.Unmarshal(bytes, &post)
-		if err != nil {
-
-		}
-		post.Initials = substr(strings.TrimSpace(post.User), 0, 2)
-		post.UserColor = makeUniqueColor(post.User)
-		post.Highlights = make(map[string]template.HTML)
-		for fieldname, fragment := range i.Fragments {
-			// TODO: this should not be indexed, only stored, but something is wrong so we have to filter it here
-			if fieldname == "html" {
-				continue
+	match, err := searchResult.Next()
+	for err == nil && match != nil {
+		err = match.VisitStoredFields(func(field string, value []byte) bool {
+			if field == "_id" {
+				fmt.Printf("match: %s\n", string(value))
 			}
-			post.Highlights[fieldname] = template.HTML(strings.Join(fragment, " &hellip; "))
+			return true
+		})
+		if err != nil {
+			log.Fatalf("error loading stored fields: %v", err)
 		}
-		//fmt.Println(nr, i.ID, i.Fragments, i.Fields["html"])
-		//fmt.Println(post)
-		results = append(results, post)
+		match, err = searchResult.Next()
 	}
+	if err != nil {
+		log.Fatalf("error iterator document matches: %v", err)
+	}
+
+	// fmt.Println("search took", searchResult.Took)
+	// fmt.Println(searchResult.Total, "documents found")
+
+	// TODO this entire logic should be ported to the bluge framework up there ^^ in the loop
+	/*
+		for _, i := range searchResult.Hits {
+			//if nr == 0 {
+			//	fmt.Println(i.Fields)
+			//}
+			bytes, err := json.Marshal(i.Fields)
+			if err != nil {
+
+			}
+			var post SearchResult
+			err = json.Unmarshal(bytes, &post)
+			if err != nil {
+
+			}
+			post.Initials = substr(strings.TrimSpace(post.User), 0, 2)
+			post.UserColor = makeUniqueColor(post.User)
+			post.Highlights = make(map[string]template.HTML)
+			for fieldname, fragment := range i.Fragments {
+				// TODO: this should not be indexed, only stored, but something is wrong so we have to filter it here
+				if fieldname == "html" {
+					continue
+				}
+				post.Highlights[fieldname] = template.HTML(strings.Join(fragment, " &hellip; "))
+			}
+			//fmt.Println(nr, i.ID, i.Fragments, i.Fields["html"])
+			//fmt.Println(post)
+			results = append(results, post)
+		}
+	*/
 	return SearchResponse{
 		Results:     results,
-		TimeSeconds: searchResult.Took.Seconds(),
-		ResultCount: searchResult.Total,
+		TimeSeconds: 0, // TODO compute this ourselves? searchResult.Took.Seconds(),
+		ResultCount: 0, // searchResult.Total,
 	}
 }
