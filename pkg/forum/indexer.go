@@ -54,11 +54,19 @@ func postToDocument(p Post) *bluge.Document {
 	*/
 
 	// TODO complete this
+	// TODO: how do we add sortable flags?
 	d.AddField(bluge.NewTextField("url", p.Url))
-	d.AddField(bluge.NewNumericField("url", float64(p.ThreadId))) // NOTE: we have to switch to strings at some point.
+	d.AddField(bluge.NewNumericField("threadid", float64(p.ThreadId))) // NOTE: we have to switch to strings at some point.
+	d.AddField(bluge.NewNumericField("postseq", float64(p.PostSeq)))
+	d.AddField(bluge.NewNumericField("pageseq", float64(p.PageSeq)))
+	d.AddField(bluge.NewNumericField("threadpostid", float64(p.ThreadPostId)))
+	d.AddField(bluge.NewKeywordField("user", p.User))
+	d.AddField(bluge.NewKeywordField("usericon", p.UserIcon))
 	d.AddField(bluge.NewTextField("hdr", p.Hdr))
-	d.AddField(bluge.NewTextField("hdr", p.Hdr))
-	d.AddField(bluge.NewTextField("hdr", p.Hdr))
+	d.AddField(bluge.NewTextField("msg", p.Msg))
+	html := bluge.NewTextField("html", p.Html)
+	html.FieldOptions = bluge.Store
+	d.AddField(html)
 
 	return d
 }
@@ -72,10 +80,11 @@ func (f *Indexer) AddPost(id string, b Post) {
 	// todo use id and b to construct a document!
 	doc := postToDocument(b)
 	f.batch.Insert(doc)
-	if f.batchCount > 10000 {
+	f.batchCount++
+	if f.batchCount >= 10000 {
 		fmt.Println("flushing search index batch (", f.count, "total posts seen)")
 		f.idx.Batch(f.batch)
-		f.batch = nil
+		f.batch.Reset()
 		f.batchCount = 0
 	}
 }
@@ -83,7 +92,7 @@ func (f *Indexer) AddPost(id string, b Post) {
 func (f *Indexer) Close() {
 	if f.batch != nil {
 		f.idx.Batch(f.batch)
-		f.batch = nil
+		f.batch.Reset()
 	}
 	f.idx.Close()
 	fmt.Println("indexed", f.count, "posts")
