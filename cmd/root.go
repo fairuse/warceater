@@ -60,7 +60,7 @@ func init() {
 	// will be global for your application.
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.warceater.yaml)")
-	rootCmd.PersistentFlags().StringVar(&cpuProfile, "cpuprofile","", "write cpu profile to file")
+	rootCmd.PersistentFlags().StringVar(&cpuProfile, "cpuprofile", "", "write cpu profile to file")
 	rootCmd.PersistentFlags().StringVar(&indexPath, "index", "example.bleve", "index file path (default is ./example.bleve")
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.

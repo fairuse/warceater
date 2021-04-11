@@ -19,9 +19,9 @@ import "github.com/fairuse/warceater/cmd"
 import "github.com/pyroscope-io/pyroscope/pkg/agent/profiler"
 
 func main() {
-  profiler.Start(profiler.Config{
-        ApplicationName: "warceater-anon",
-        ServerAddress:   "http://localhost:4040",
-    })
+	profiler.Start(profiler.Config{
+		ApplicationName: "warceater-anon",
+		ServerAddress:   "http://localhost:4040",
+	})
 	cmd.Execute()
 }

@@ -3,8 +3,8 @@ package parsers
 import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
-	"github.com/microcosm-cc/bluemonday"
 	"github.com/fairuse/warceater/pkg/forum"
+	"github.com/microcosm-cc/bluemonday"
 	"golang.org/x/net/html"
 	"io"
 	"log"

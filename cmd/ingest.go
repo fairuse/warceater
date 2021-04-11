@@ -20,10 +20,11 @@ import (
 	"fmt"
 	"github.com/CorentinB/warc"
 	"github.com/cheggaaa/pb/v3"
+	"github.com/fairuse/warceater/pkg/forum"
+	"github.com/fairuse/warceater/pkg/iazstd"
+	"github.com/fairuse/warceater/pkg/parsers"
 	"github.com/spf13/cobra"
 	"github.com/valyala/gozstd"
-	"github.com/fairuse/warceater/pkg/forum"
-	"github.com/fairuse/warceater/pkg/parsers"
 	"log"
 	"net/http"
 	"os"
@@ -66,7 +67,14 @@ func loadWarc(filename string, parser forum.Parser) {
 
 	stats, err := os.Stat(filename)
 	bar := pb.Full.Start64(stats.Size())
-	barReader := bar.NewProxyReader(f)
+	barReader := bufio.NewReader(bar.NewProxyReader(f))
+
+	zstdReader, zerr := iazstd.NewZstdDictReader(barReader)
+	if zerr == nil { // apparently, this was a zstd file, let's decompress it on the fly
+		barReader = bufio.NewReader(zstdReader)
+	}
+
+	fmt.Println(barReader.ReadString('\n'))
 
 	r, err := warc.NewReader(barReader)
 	if err != nil {
@@ -167,7 +175,7 @@ index. This can be a time-consuming operation.`,
 				panic(err)
 			}
 			pprof.StartCPUProfile(f)
-			fmt.Println("enabling CPU profiling, writing to",cpuProfile)
+			fmt.Println("enabling CPU profiling, writing to", cpuProfile)
 			defer pprof.StopCPUProfile()
 		}
 		p := parsers.LeagueForumParser{}
