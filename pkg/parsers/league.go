@@ -18,7 +18,7 @@ type LeagueForumParser struct {
 	// some space for parser specific data here
 }
 
-func (fp *LeagueForumParser) ParseResponse(body io.ReadCloser, header http.Header, uri string) ([]forum.Post, error) {
+func (fp *LeagueForumParser) ParseResponse(body io.Reader, header http.Header, uri string) ([]forum.Post, error) {
 	sanitizer := bluemonday.UGCPolicy()
 
 	ctype := header.Get("content-type")

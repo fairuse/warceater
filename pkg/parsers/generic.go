@@ -35,7 +35,7 @@ func newGenericForumParser() GenericForumParser {
 	}}
 }
 
-func (fp *GenericForumParser) ParseResponse(body io.ReadCloser, header http.Header, uri string) ([]forum.Post, error) {
+func (fp *GenericForumParser) ParseResponse(body io.Reader, header http.Header, uri string) ([]forum.Post, error) {
 	sanitizer := bluemonday.UGCPolicy()
 
 	ctype := header.Get("content-type")

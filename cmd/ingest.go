@@ -17,16 +17,18 @@ package cmd
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
-	"github.com/CorentinB/warc"
 	"github.com/cheggaaa/pb/v3"
 	"github.com/fairuse/warceater/pkg/forum"
-	"github.com/fairuse/warceater/pkg/iazstd"
 	"github.com/fairuse/warceater/pkg/parsers"
 	"github.com/spf13/cobra"
 	"github.com/valyala/gozstd"
+	"io/ioutil"
+
+	// "github.com/fairuse/warc"
+	"gitlab.roelf.org/warcscan/warcreader/pkg/warcreader"
 	"log"
-	"net/http"
 	"os"
 	"runtime/pprof"
 	"sync"
@@ -69,17 +71,22 @@ func loadWarc(filename string, parser forum.Parser) {
 	bar := pb.Full.Start64(stats.Size())
 	barReader := bufio.NewReader(bar.NewProxyReader(f))
 
-	zstdReader, zerr := iazstd.NewZstdDictReader(barReader)
-	if zerr == nil { // apparently, this was a zstd file, let's decompress it on the fly
-		barReader = bufio.NewReader(zstdReader)
-	}
+	//zstdReader, zerr := iazstd.NewZstdDictReader(barReader)
+	//if zerr == nil { // apparently, this was a zstd file, let's decompress it on the fly
+	//	barReader = bufio.NewReader(zstdReader)
+	//}
+	//
+	//fmt.Println(barReader.ReadString('\n'))
 
-	fmt.Println(barReader.ReadString('\n'))
-
-	r, err := warc.NewReader(barReader)
+	// maybe initiate a NewDecompressedReader here
+	decomp, err := warcreader.NewDecompressedReader(barReader)
 	if err != nil {
 		panic(err)
 	}
+	r := warcreader.NewWARCReader(decomp)
+	//if err != nil {
+	//	panic(err)
+	//}
 
 	indexWaiter.Add(1)
 	go func() {
@@ -105,38 +112,47 @@ func loadWarc(filename string, parser forum.Parser) {
 		}(nr)
 	}
 
-	defer r.Close()
+	// defer r.Close()
 	for {
-		record, err := r.ReadRecord(false)
+		record, err := r.NextRecord()
 		if err != nil {
 			log.Println(err)
 			break
 		}
 
-		rectype := record.Header.Get("content-type")
+		//rectype, ok := record.Headers["content-type"]
+		//if !ok {
+		//	fmt.Println("content-type not known")
+		//}
 
 		// Note: sometimes there is a space before msgtype, sometimes there is not
-		if rectype == "application/http; msgtype=request" {
-			request, err := http.ReadRequest(bufio.NewReader(record.Content))
-			if err != nil {
-				log.Println("failed to read request", err)
-				continue
-			}
-			_ = request
-			// log.Println("read request",request.URL)
-		}
-		if rectype == "application/http; msgtype=response" {
+		//if rectype == "application/http; msgtype=request" {
+		//	request, err := http.ReadRequest(bufio.NewReader(record.Content))
+		//	if err != nil {
+		//		log.Println("failed to read request", err)
+		//		continue
+		//	}
+		//	_ = request
+		//	// log.Println("read request",request.URL)
+		//}
+		if record.Type == warcreader.RecordTypeResponse {
 			// fmt.Println(record)
-			response, err := http.ReadResponse(bufio.NewReader(record.Content), nil)
+			response, err := record.ParseHTTPResponse() // http.ReadResponse(bufio.NewReader(record.Content), nil)
 			if err != nil {
 				log.Println("failed to read response body", err)
 				continue
 			}
-			uri := record.Header.Get("warc-target-uri")
+			uri := record.TargetURI()
+			if uri == "" {
+				fmt.Println("failed to get warc-target-uri for response", record.Headers)
+			}
 			//_, _ = ioutil.ReadAll(response.Body)
 			//_ = uri
+
+			solidBody, err := ioutil.ReadAll(response.Body)
+
 			body := forum.ParserBody{
-				Body:   response.Body,
+				Body:   bytes.NewReader(solidBody),
 				Header: response.Header,
 				Uri:    uri,
 			}
