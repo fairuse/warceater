@@ -146,6 +146,8 @@ func loadWarc(filename string, parser forum.Parser) {
 			if uri == "" {
 				fmt.Println("failed to get warc-target-uri for response", record.Headers)
 			}
+
+			// fmt.Println(uri)
 			//_, _ = ioutil.ReadAll(response.Body)
 			//_ = uri
 
