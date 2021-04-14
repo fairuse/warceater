@@ -7,6 +7,7 @@ require (
 	github.com/RoaringBitmap/roaring v0.5.5 // indirect
 	github.com/andybalholm/cascadia v1.2.0 // indirect
 	github.com/blugelabs/bluge v0.1.5
+	github.com/blugelabs/query_string v0.1.0 // indirect
 	github.com/cheggaaa/pb/v3 v3.0.6
 	github.com/dgryski/go-metro v0.0.0-20200812162917-85c65e2d0165 // indirect
 	github.com/foolin/goview v0.3.0

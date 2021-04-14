@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/blugelabs/bluge"
 	"github.com/blugelabs/bluge/index"
+	"github.com/blugelabs/query_string"
 	"log"
 )
 
@@ -130,7 +131,16 @@ func makeUniqueColor(s string) string {
 }
 
 func (f *Indexer) SearchQueryString(q string) SearchResponse {
-	query := bluge.NewMatchQuery(q)
+	// query := bluge.NewMatchQuery(q)
+	query, err := querystr.ParseQueryString(q, querystr.DefaultOptions())
+	if err != nil {
+		// TODO implement error returns
+		return SearchResponse{
+			Results:     nil,
+			TimeSeconds: 0,
+			ResultCount: 0,
+		}
+	}
 	return f.Search(query)
 }
 
