@@ -26,7 +26,9 @@ func NewForumIndex(path string) *Indexer {
 	//storeOnlyMapping.Index = false // do not index, but do store
 	//docmap.AddFieldMappingsAt("html", storeOnlyMapping)
 	//mapping.AddDocumentMapping("post", docmap)
-	index, err := bluge.OpenWriter(bluge.DefaultConfig(path))
+	config := bluge.DefaultConfig(path)
+	// TODO: expose the number of writer threads to the config and set it to a higher number
+	index, err := bluge.OpenWriter(config)
 	if err != nil {
 		// index, err = bluge.New(path, mapping)
 		//index, err = bluge.NewUsing(path, mapping, scorch.Name, scorch.Name, map[string]interface{}{"numSnapshotsToKeep": 0, "unsafe_batch": true})
@@ -72,7 +74,7 @@ func postToDocument(p Post) *bluge.Document {
 	return d
 }
 
-func (f *Indexer) AddPost(id string, b Post) {
+func (f *Indexer) AddPost(b Post) {
 	if f.batch == nil {
 		f.batch = bluge.NewBatch()
 		f.batchCount = 0
@@ -101,8 +103,7 @@ func (f *Indexer) Close() {
 
 func (f *Indexer) AddPosts(posts []Post) {
 	for _, body := range posts {
-		f.AddPost(body.Id, body)
-		//  f.idx.Index("test", body)
+		f.AddPost(body)
 	}
 }
 

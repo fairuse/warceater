@@ -67,27 +67,21 @@ func loadWarc(filename string, parser forum.Parser) {
 		panic(err)
 	}
 
+	// wrap the reader into something that produces a progress bar
 	stats, err := os.Stat(filename)
 	bar := pb.Full.Start64(stats.Size())
 	barReader := bufio.NewReader(bar.NewProxyReader(f))
 
-	//zstdReader, zerr := iazstd.NewZstdDictReader(barReader)
-	//if zerr == nil { // apparently, this was a zstd file, let's decompress it on the fly
-	//	barReader = bufio.NewReader(zstdReader)
-	//}
-	//
-	//fmt.Println(barReader.ReadString('\n'))
-
-	// maybe initiate a NewDecompressedReader here
+	// create a decompressed version (zlib, zstd, etc.) of the stream
 	decomp, err := warcreader.NewDecompressedReader(barReader)
 	if err != nil {
 		panic(err)
 	}
-	r := warcreader.NewWARCReader(decomp)
-	//if err != nil {
-	//	panic(err)
-	//}
 
+	// create the reader on top of the decompressed stream
+	r := warcreader.NewWARCReader(decomp)
+
+	// set up the indexer.
 	indexWaiter.Add(1)
 	go func() {
 		for posts := range postsStream {
