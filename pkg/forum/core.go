@@ -4,7 +4,7 @@ import "html/template"
 
 type Post struct {
 	Url          string `json:"url"`
-	ThreadId     int    `json:"threadid"`     // thead identifier, same for all posts in a thread
+	ThreadId     string `json:"threadid"`     // thead identifier, same for all posts in a thread
 	PostSeq      int    `json:"threadseq"`    // post identifier, sequential in order within a thread page
 	PageSeq      int    `json:"pageseq"`      // page (of thread) id, ordered
 	ThreadPostId int64  `json:"threadpostid"` // combined key, uniquely identifies a thread+post id, ordered

@@ -25,6 +25,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/valyala/gozstd"
 	"io/ioutil"
+	"net/http"
 
 	// "github.com/fairuse/warc"
 	"gitlab.roelf.org/warcscan/warcreader/pkg/warcreader"
@@ -120,15 +121,24 @@ func loadWarc(filename string, parser forum.Parser) {
 		//}
 
 		// Note: sometimes there is a space before msgtype, sometimes there is not
-		//if rectype == "application/http; msgtype=request" {
-		//	request, err := http.ReadRequest(bufio.NewReader(record.Content))
-		//	if err != nil {
-		//		log.Println("failed to read request", err)
-		//		continue
-		//	}
-		//	_ = request
-		//	// log.Println("read request",request.URL)
-		//}
+		if record.Type == warcreader.RecordTypeRequest {
+			request, err := http.ReadRequest(bufio.NewReader(record))
+			if err != nil {
+				log.Println("failed to read request", err)
+				continue
+			}
+			_ = request
+			// log.Println("read request",request.URL)
+			if request.Method != "GET" {
+				fmt.Println("REQ:", request)
+				fmt.Println("RECHDR:", record.Headers)
+				reqbody, err := ioutil.ReadAll(request.Body)
+				if err != nil {
+					fmt.Println("failed to read req body")
+				}
+				fmt.Println("REQBODY:", string(reqbody))
+			}
+		}
 		if record.Type == warcreader.RecordTypeResponse {
 			// fmt.Println(record)
 			response, err := record.ParseHTTPResponse() // http.ReadResponse(bufio.NewReader(record.Content), nil)
@@ -147,6 +157,7 @@ func loadWarc(filename string, parser forum.Parser) {
 
 			solidBody, err := ioutil.ReadAll(response.Body)
 
+			// fmt.Println("RECHDR:",record.Headers)
 			body := forum.ParserBody{
 				Body:   bytes.NewReader(solidBody),
 				Header: response.Header,
@@ -190,7 +201,7 @@ index. This can be a time-consuming operation.`,
 			fmt.Println("enabling CPU profiling, writing to", cpuProfile)
 			defer pprof.StopCPUProfile()
 		}
-		p := parsers.LeagueForumParser{}
+		p := parsers.YahooAnswersParser{}
 		for _, filename := range args {
 			loadWarc(filename, &p)
 		}

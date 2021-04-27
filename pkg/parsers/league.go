@@ -35,7 +35,7 @@ func (fp *LeagueForumParser) ParseResponse(body io.Reader, header http.Header, u
 	threadUrl, err := url.Parse(uri)
 	// we have built some logic that can either get the threadid from a query parameter, or from a part of the threadUrl
 	threadIdStr := threadUrl.Query().Get("t") // todo <- make customizable
-	threadId, err := strconv.Atoi(threadIdStr)
+	// threadId, err := strconv.Atoi(threadIdStr)
 
 	pageSeqStr := threadUrl.Query().Get("page")
 	pageSeq, err := strconv.Atoi(pageSeqStr)
@@ -68,7 +68,7 @@ func (fp *LeagueForumParser) ParseResponse(body io.Reader, header http.Header, u
 			// fmt.Printf("Post %s [%d]: %s : %s - %s\n", id, postNr, user, len(hdr), len(msg))
 			x := forum.Post{
 				Url:          uri,
-				ThreadId:     threadId,
+				ThreadId:     threadIdStr,
 				PageSeq:      pageSeq,
 				PostSeq:      postNr,
 				ThreadPostId: int64(pageSeq)*1000 + int64(postNr),

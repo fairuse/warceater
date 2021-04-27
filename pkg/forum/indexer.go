@@ -59,7 +59,7 @@ func postToDocument(p Post) *bluge.Document {
 	// TODO complete this
 	// TODO: how do we add sortable flags?
 	d.AddField(bluge.NewTextField("url", p.Url))
-	d.AddField(bluge.NewNumericField("threadid", float64(p.ThreadId))) // NOTE: we have to switch to strings at some point.
+	d.AddField(bluge.NewKeywordField("threadid", p.ThreadId)) // NOTE: we switched to strings at some point.
 	d.AddField(bluge.NewNumericField("postseq", float64(p.PostSeq)))
 	d.AddField(bluge.NewNumericField("pageseq", float64(p.PageSeq)))
 	d.AddField(bluge.NewNumericField("threadpostid", float64(p.ThreadPostId)))
