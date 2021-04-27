@@ -130,13 +130,14 @@ func loadWarc(filename string, parser forum.Parser) {
 			_ = request
 			// log.Println("read request",request.URL)
 			if request.Method != "GET" {
-				fmt.Println("REQ:", request)
-				fmt.Println("RECHDR:", record.Headers)
+				//fmt.Println("REQ:", request)
+				//fmt.Println("RECHDR:", record.Headers)
 				reqbody, err := ioutil.ReadAll(request.Body)
 				if err != nil {
 					fmt.Println("failed to read req body")
 				}
-				fmt.Println("REQBODY:", string(reqbody))
+				_ = reqbody // TODO use this somewhere
+				//fmt.Println("REQBODY:", string(reqbody))
 			}
 		}
 		if record.Type == warcreader.RecordTypeResponse {
@@ -148,7 +149,7 @@ func loadWarc(filename string, parser forum.Parser) {
 			}
 			uri := record.TargetURI()
 			if uri == "" {
-				fmt.Println("failed to get warc-target-uri for response", record.Headers)
+				log.Println("failed to get warc-target-uri for response", record.Headers)
 			}
 
 			// fmt.Println(uri)

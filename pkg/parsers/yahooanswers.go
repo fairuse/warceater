@@ -126,48 +126,15 @@ type QAPagePayload struct {
 func (fp *YahooAnswersParser) ParseResponse(body io.Reader, header http.Header, uri string) ([]forum.Post, error) {
 	sanitizer := bluemonday.UGCPolicy()
 
-	// fmt.Println(uri,header)
-
-	ctype := header.Get("content-type")
-
-	fmt.Println("RSPTYPE", uri, ctype)
-
+	// There are special PUT requests that are used for pagination, we handle them here
 	if strings.Contains(uri, "_reservice_") {
-		fmt.Println("RESERVICE PARSE")
-		data, err := ioutil.ReadAll(body)
-		if err != nil {
-			return nil, err // todo: wrap error
-		}
-		fmt.Println(string(data))
-		// var payload map[string]interface{}
-		var payload ServicePayload
-		err = json.Unmarshal(data, &payload)
-		if err != nil {
-			fmt.Println("reservice stage 1 unmarshall error", err)
-		}
-		fmt.Println("type", payload.Type)
-		if payload.Type == "FETCH_QUESTION_ANSWERS_END" {
-			var qapayload QAPagePayload
-			err = json.Unmarshal(payload.Payload, &qapayload)
-			if err != nil {
-				fmt.Println("reservice stage 2 unmarshall error", err)
-			}
-			for answerNr, answer := range qapayload.Answers {
-				pageSeq := qapayload.Start + answerNr
-				fmt.Println("ANS", qapayload.Qid, pageSeq, answer.Text)
-
-				// TODO refactor and emit Posts to output
-			}
-
-			fmt.Println("!!! RESERVICE PAYLOAD:", qapayload)
-			fmt.Println(err)
-
-		}
-		return nil, nil
+		return fp.parseReservice(body)
 	}
 
+	ctype := header.Get("content-type")
+	//fmt.Println("RSPTYPE", uri, ctype)
 	if !strings.HasPrefix(ctype, "text/html") {
-		return nil, fmt.Errorf("not text/html")
+		return nil, fmt.Errorf("%s not text/html, but %s", uri, ctype)
 	}
 
 	root, err := html.Parse(body)
@@ -177,14 +144,16 @@ func (fp *YahooAnswersParser) ParseResponse(body io.Reader, header http.Header, 
 	}
 
 	threadUrl, err := url.Parse(uri)
-	// we have built some logic that can either get the threadid from a query parameter, or from a part of the threadUrl
-	threadIdStr := threadUrl.Query().Get("qid") // todo <- make customizable
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse url %s: %w", uri, err)
+	}
+	// we need a unique identifier for this thread, we use the QID for this
+	threadIdStr := threadUrl.Query().Get("qid")
 	if threadIdStr == "" {
-		fmt.Println("failed to get qid at", uri)
-		return nil, nil
+		return nil, fmt.Errorf("failed to get qid for %s", uri)
 	}
 
-	fmt.Println("got qid page for", threadIdStr)
+	// fmt.Println("got qid page for", threadIdStr)
 
 	pageSeqStr := threadUrl.Query().Get("page")
 	pageSeq, err := strconv.Atoi(pageSeqStr)
@@ -205,15 +174,18 @@ func (fp *YahooAnswersParser) ParseResponse(body io.Reader, header http.Header, 
 		err := json.Unmarshal([]byte(selection.Text()), &payload)
 		if err != nil {
 			fmt.Println("failed to parse page payload", err)
+			return
 		}
 		if payload.Type == "QAPage" {
-			fmt.Println("!!! GOT A SCRIPT HURRAH!", payload)
-			fmt.Println("QQQ", selection.Text())
+			// fmt.Println("!!! GOT A SCRIPT HURRAH!", payload)
+			// fmt.Println("QQQ", selection.Text())
 			// put the accepted answer at position 0?
-			fmt.Println("ANS2", payload.Mainentity.Acceptedanswer.Text)
+			question := payload.Mainentity.Text
+			fmt.Println("QST", threadIdStr, question)
+			fmt.Println("ANS2", threadIdStr, 0, html.UnescapeString(payload.Mainentity.Acceptedanswer.Text))
 			for nr, answer := range payload.Mainentity.Suggestedanswer {
 				// TODO: get the start and count from the original request, so we know what the proper subpageSeq numbers are
-				fmt.Println("ANS2", nr, answer.Text)
+				fmt.Println("ANS2", threadIdStr, nr+1, html.UnescapeString(answer.Text))
 			}
 
 		}
@@ -251,4 +223,34 @@ func (fp *YahooAnswersParser) ParseResponse(body io.Reader, header http.Header, 
 		}
 	})
 	return bodies, nil
+}
+
+func (fp *YahooAnswersParser) parseReservice(body io.Reader) ([]forum.Post, error) {
+	// fmt.Println("RESERVICE PARSE")
+	data, err := ioutil.ReadAll(body)
+	if err != nil {
+		return nil, err // todo: wrap error
+	}
+	// fmt.Println(string(data))
+	// var payload map[string]interface{}
+	var payload ServicePayload
+	err = json.Unmarshal(data, &payload)
+	if err != nil {
+		return nil, fmt.Errorf("reservice stage 1 unmarshall error: %s", err)
+	}
+	if payload.Type == "FETCH_QUESTION_ANSWERS_END" {
+		var qapayload QAPagePayload
+		err = json.Unmarshal(payload.Payload, &qapayload)
+		if err != nil {
+			return nil, fmt.Errorf("reservice stage 2 unmarshall error: %s", err)
+		}
+		qid := qapayload.Qid
+		for answerNr, answer := range qapayload.Answers {
+			pageSeq := qapayload.Start + answerNr
+			fmt.Println("ANS", qid, pageSeq, answer.Text)
+
+			// TODO refactor and emit Posts to output
+		}
+	}
+	return nil, nil
 }
