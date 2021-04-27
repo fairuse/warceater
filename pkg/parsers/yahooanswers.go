@@ -127,7 +127,7 @@ func newQuestionPost(qid string, text string) forum.Post {
 		ThreadId:     qid,
 		PostSeq:      0,
 		PageSeq:      0,
-		ThreadPostId: 0,
+		ThreadPostId: "",
 		Id:           qid + "-q",
 		User:         "",
 		UserIcon:     "",
@@ -143,7 +143,7 @@ func newAnswerPost(qid string, nr int, text string) forum.Post {
 		ThreadId:     qid,
 		PostSeq:      nr + 1,
 		PageSeq:      nr / 10,
-		ThreadPostId: int64(nr),
+		ThreadPostId: fmt.Sprintf("%s-%05d", qid, nr),
 		Id:           qid + "-a-" + fmt.Sprintf("%05d", nr),
 		User:         "",
 		UserIcon:     "",
@@ -200,6 +200,7 @@ func (fp *YahooAnswersParser) ParseResponse(body io.Reader, header http.Header, 
 
 	bodies := make([]forum.Post, 0)
 
+	// for answer pages with <10 answers, the answers are embedded as a json-ld payload in the served page
 	doc.Find("script[type=\"application/ld+json\"]").Each(func(i int, selection *goquery.Selection) {
 		var payload PagePayload
 		err := json.Unmarshal([]byte(selection.Text()), &payload)

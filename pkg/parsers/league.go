@@ -71,7 +71,7 @@ func (fp *LeagueForumParser) ParseResponse(body io.Reader, header http.Header, u
 				ThreadId:     threadIdStr,
 				PageSeq:      pageSeq,
 				PostSeq:      postNr,
-				ThreadPostId: int64(pageSeq)*1000 + int64(postNr),
+				ThreadPostId: fmt.Sprintf("%012d-%05d", pageSeq, postNr),
 				Id:           id,
 				User:         user,
 				UserIcon:     userIconUri,

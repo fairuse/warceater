@@ -8,11 +8,14 @@ import (
 	"github.com/blugelabs/bluge"
 	"github.com/blugelabs/bluge/index"
 	"github.com/blugelabs/query_string"
+	"golang.org/x/net/html"
+	"html/template"
 	"log"
 )
 
 type Indexer struct {
 	idx        *bluge.Writer
+	reader     *bluge.Reader
 	batch      *index.Batch
 	count      int
 	batchCount int
@@ -36,7 +39,13 @@ func NewForumIndex(path string) *Indexer {
 		panic(err)
 		//}
 	}
-	return &Indexer{idx: index}
+
+	reader, err := index.Reader()
+	if err != nil {
+		panic(err)
+	}
+
+	return &Indexer{idx: index, reader: reader}
 }
 
 func postToDocument(p Post) *bluge.Document {
@@ -57,21 +66,36 @@ func postToDocument(p Post) *bluge.Document {
 	*/
 
 	// TODO complete this
-	// TODO: how do we add sortable flags?
-	d.AddField(bluge.NewTextField("url", p.Url))
-	d.AddField(bluge.NewKeywordField("threadid", p.ThreadId)) // NOTE: we switched to strings at some point.
+	d.AddField(newStoredKeywordField("url", p.Url))
+	d.AddField(newStoredKeywordField("threadid", p.ThreadId)) // NOTE: we switched to strings at some point.
 	d.AddField(bluge.NewNumericField("postseq", float64(p.PostSeq)))
 	d.AddField(bluge.NewNumericField("pageseq", float64(p.PageSeq)))
-	d.AddField(bluge.NewNumericField("threadpostid", float64(p.ThreadPostId)))
-	d.AddField(bluge.NewKeywordField("user", p.User))
-	d.AddField(bluge.NewKeywordField("usericon", p.UserIcon))
-	d.AddField(bluge.NewTextField("hdr", p.Hdr))
-	d.AddField(bluge.NewTextField("msg", p.Msg))
-	html := bluge.NewTextField("html", p.Html)
-	html.FieldOptions = bluge.Store
-	d.AddField(html)
+	d.AddField(newStoredSortedKeywordField("threadpostid", p.ThreadPostId))
+	d.AddField(newStoredKeywordField("user", p.User))
+	d.AddField(newStoredKeywordField("usericon", p.UserIcon))
+	d.AddField(newStoredTextField("hdr", p.Hdr))
+	d.AddField(newStoredTextField("msg", p.Msg))
+	d.AddField(newStoredTextField("html", p.Html))
 
 	return d
+}
+
+func newStoredTextField(name string, content string) *bluge.TermField {
+	field := bluge.NewTextField(name, content)
+	field.FieldOptions |= bluge.Store
+	return field
+}
+
+func newStoredKeywordField(name string, content string) *bluge.TermField {
+	field := bluge.NewKeywordField(name, content)
+	field.FieldOptions |= bluge.Store
+	return field
+}
+
+func newStoredSortedKeywordField(name string, content string) *bluge.TermField {
+	field := bluge.NewKeywordField(name, content)
+	field.FieldOptions |= bluge.Store | bluge.Sortable
+	return field
 }
 
 func (f *Indexer) AddPost(b Post) {
@@ -135,6 +159,7 @@ func (f *Indexer) SearchQueryString(q string) SearchResponse {
 	// query := bluge.NewMatchQuery(q)
 	query, err := querystr.ParseQueryString(q, querystr.DefaultOptions())
 	if err != nil {
+		log.Println("failed to parse query string...", query, err)
 		// TODO implement error returns
 		return SearchResponse{
 			Results:     nil,
@@ -165,10 +190,10 @@ func (f *Indexer) Search(query bluge.Query) (response SearchResponse) {
 	return f.SearchByRequest(searchRequest)
 }
 
-func (f *Indexer) SearchThread(threadId int) (response SearchResponse) {
+func (f *Indexer) SearchThread(threadId string) (response SearchResponse) {
 	//q := bluge.NewQueryStringQuery(query)
-	tid := float64(threadId)
-	query := bluge.NewNumericRangeInclusiveQuery(tid, tid, true, true)
+	// tid := float64(threadId)
+	query := bluge.NewMatchQuery(threadId)
 	query.SetField("threadid")
 	//	fmt.Println("searchThread",query.Match)
 
@@ -186,11 +211,13 @@ func (f *Indexer) SearchThread(threadId int) (response SearchResponse) {
 }
 
 func (f *Indexer) SearchByRequest(searchRequest bluge.SearchRequest) SearchResponse {
-	var reader bluge.Reader // TODO this still needs to be split off, put in the f struct, etc.
+	//var reader bluge.Reader // TODO this still needs to be split off, put in the f struct, etc.
 
-	searchResult, err := reader.Search(context.Background(), searchRequest)
+	log.Println("running SearchByRequest...")
+	searchResult, err := f.reader.Search(context.Background(), searchRequest)
 	if err != nil {
 		// TODO: do something
+		log.Println("failed to run query", searchRequest, err)
 		return SearchResponse{}
 	}
 	// searchResult, _ := f.idx.Search(searchRequest)
@@ -199,23 +226,36 @@ func (f *Indexer) SearchByRequest(searchRequest bluge.SearchRequest) SearchRespo
 
 	match, err := searchResult.Next()
 	for err == nil && match != nil {
+		var r SearchResult
+		log.Println("got a search result, examining fields")
 		err = match.VisitStoredFields(func(field string, value []byte) bool {
 			if field == "_id" {
 				fmt.Printf("match: %s\n", string(value))
+			}
+			fmt.Println(field, string(value))
+			switch field {
+			case "msg":
+				r.Msg = string(value)
+				r.Html = template.HTML(html.EscapeString(string(value)))
+			case "_id":
+				r.Id = string(value)
+			case "threadid":
+				r.ThreadId = string(value)
 			}
 			return true
 		})
 		if err != nil {
 			log.Fatalf("error loading stored fields: %v", err)
 		}
+		results = append(results, r)
 		match, err = searchResult.Next()
 	}
 	if err != nil {
 		log.Fatalf("error iterator document matches: %v", err)
 	}
-
-	// fmt.Println("search took", searchResult.Took)
-	// fmt.Println(searchResult.Total, "documents found")
+	//
+	//fmt.Println("search took", searchResult.Took)
+	//fmt.Println(searchResult.Total, "documents found")
 
 	// TODO this entire logic should be ported to the bluge framework up there ^^ in the loop
 	/*

@@ -18,13 +18,11 @@ package cmd
 import (
 	"fmt"
 	"github.com/fairuse/warceater/pkg/forum"
-	"html/template"
-	"strconv"
-
 	"github.com/foolin/goview/supports/ginview"
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
+	"html/template"
 	"net/http"
 )
 
@@ -58,12 +56,12 @@ func (s *SearchController) handleSearch(ctx *gin.Context) {
 
 func (s *SearchController) handleThread(ctx *gin.Context) {
 	threadIdStr := ctx.Param("threadid")
-	threadId, err := strconv.Atoi(threadIdStr)
-	fmt.Println("handleThread:", threadIdStr, threadId)
-	if err != nil {
-		return // TODO
-	}
-	response := s.idx.SearchThread(threadId)
+	//threadId, err := strconv.Atoi(threadIdStr)
+	//fmt.Println("handleThread:", threadIdStr, threadId)
+	//if err != nil {
+	//	return // TODO
+	//}
+	response := s.idx.SearchThread(threadIdStr)
 	ctx.HTML(http.StatusOK, "index", gin.H{
 		"title": "WARCeater 0.0",
 		"add": func(a int, b int) int {
