@@ -5,14 +5,12 @@ import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/fairuse/warceater/pkg/forum"
-	"github.com/microcosm-cc/bluemonday"
 	"golang.org/x/net/html"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -123,8 +121,41 @@ type QAPagePayload struct {
 	IsServerFetched bool `json:"isServerFetched"`
 }
 
+func newQuestionPost(qid string, text string) forum.Post {
+	return forum.Post{
+		Url:          "",
+		ThreadId:     qid,
+		PostSeq:      0,
+		PageSeq:      0,
+		ThreadPostId: 0,
+		Id:           qid + "-q",
+		User:         "",
+		UserIcon:     "",
+		Hdr:          "",
+		Msg:          text,
+		Html:         "",
+	}
+}
+
+func newAnswerPost(qid string, nr int, text string) forum.Post {
+	return forum.Post{
+		Url:          "",
+		ThreadId:     qid,
+		PostSeq:      nr + 1,
+		PageSeq:      nr / 10,
+		ThreadPostId: int64(nr),
+		Id:           qid + "-a-" + fmt.Sprintf("%05d", nr),
+		User:         "",
+		UserIcon:     "",
+		Hdr:          "",
+		Msg:          text,
+		Html:         "",
+	}
+
+}
+
 func (fp *YahooAnswersParser) ParseResponse(body io.Reader, header http.Header, uri string) ([]forum.Post, error) {
-	sanitizer := bluemonday.UGCPolicy()
+	// sanitizer := bluemonday.UGCPolicy()
 
 	// There are special PUT requests that are used for pagination, we handle them here
 	if strings.Contains(uri, "_reservice_") {
@@ -155,15 +186,15 @@ func (fp *YahooAnswersParser) ParseResponse(body io.Reader, header http.Header, 
 
 	// fmt.Println("got qid page for", threadIdStr)
 
-	pageSeqStr := threadUrl.Query().Get("page")
-	pageSeq, err := strconv.Atoi(pageSeqStr)
-
-	if err != nil {
-		// fmt.Println("failed to parse thread identifier for URL", uri)
-		// fmt.Println(threadUrl.Query())
-		pageSeq = 1
-	}
-	//fmt.Println(threadUrl.Query())
+	//pageSeqStr := threadUrl.Query().Get("page")
+	//pageSeq, err := strconv.Atoi(pageSeqStr)
+	//
+	//if err != nil {
+	//	// fmt.Println("failed to parse thread identifier for URL", uri)
+	//	// fmt.Println(threadUrl.Query())
+	//	pageSeq = 1
+	//}
+	////fmt.Println(threadUrl.Query())
 
 	doc := goquery.NewDocumentFromNode(root) // not sure where to pass URI.. the internal constructor supports it, but it is not available to us
 
@@ -181,51 +212,55 @@ func (fp *YahooAnswersParser) ParseResponse(body io.Reader, header http.Header, 
 			// fmt.Println("QQQ", selection.Text())
 			// put the accepted answer at position 0?
 			question := payload.Mainentity.Text
-			fmt.Println("QST", threadIdStr, question)
-			fmt.Println("ANS2", threadIdStr, 0, html.UnescapeString(payload.Mainentity.Acceptedanswer.Text))
+			// fmt.Println("QST", threadIdStr, question)
+			bodies = append(bodies, newQuestionPost(threadIdStr, html.UnescapeString(question)))
+			bodies = append(bodies, newAnswerPost(threadIdStr, 0, html.UnescapeString(payload.Mainentity.Acceptedanswer.Text)))
 			for nr, answer := range payload.Mainentity.Suggestedanswer {
 				// TODO: get the start and count from the original request, so we know what the proper subpageSeq numbers are
-				fmt.Println("ANS2", threadIdStr, nr+1, html.UnescapeString(answer.Text))
+				// fmt.Println("ANS2", threadIdStr, nr+1, html.UnescapeString(answer.Text))
+				bodies = append(bodies, newAnswerPost(threadIdStr, nr+1, html.UnescapeString(answer.Text)))
 			}
 
 		}
 	})
 
-	doc.Find(".content-border").Each(func(postNr int, s *goquery.Selection) {
-		// For each item found, get the band and title
-		id, _ := s.Attr("id")
-		user := s.Find(".post-user").Text()
-		msg := s.Find(".post-message").Text()
-		hdr := s.Find(".post-header").Text()
-		userIconUri, _ := s.Find(".post-avatar").Find(".avatar").Find("img").Attr("src")
-		// fmt.Println(userIconUri, ok)
-
-		_ = sanitizer
-		ohtml, _ := goquery.OuterHtml(s.Find(".post-message")) // todo handle error
-		// todo apply transformation rules to modify html (or store the unsanitized html instead, and sanitize on retrieval
-		sanehtml := sanitizer.Sanitize(ohtml)
-		if len(msg) > 0 {
-			// fmt.Printf("Post %s [%d]: %s : %s - %s\n", id, postNr, user, len(hdr), len(msg))
-			x := forum.Post{
-				Url:          uri,
-				ThreadId:     threadIdStr,
-				PageSeq:      pageSeq,
-				PostSeq:      postNr,
-				ThreadPostId: int64(pageSeq)*1000 + int64(postNr),
-				Id:           id,
-				User:         user,
-				UserIcon:     userIconUri,
-				Hdr:          hdr,
-				Msg:          msg,
-				Html:         sanehtml,
-			}
-			bodies = append(bodies, x)
-		}
-	})
+	//doc.Find(".content-border").Each(func(postNr int, s *goquery.Selection) {
+	//	// For each item found, get the band and title
+	//	id, _ := s.Attr("id")
+	//	user := s.Find(".post-user").Text()
+	//	msg := s.Find(".post-message").Text()
+	//	hdr := s.Find(".post-header").Text()
+	//	userIconUri, _ := s.Find(".post-avatar").Find(".avatar").Find("img").Attr("src")
+	//	// fmt.Println(userIconUri, ok)
+	//
+	//	_ = sanitizer
+	//	ohtml, _ := goquery.OuterHtml(s.Find(".post-message")) // todo handle error
+	//	// todo apply transformation rules to modify html (or store the unsanitized html instead, and sanitize on retrieval
+	//	sanehtml := sanitizer.Sanitize(ohtml)
+	//	if len(msg) > 0 {
+	//		// fmt.Printf("Post %s [%d]: %s : %s - %s\n", id, postNr, user, len(hdr), len(msg))
+	//		x := forum.Post{
+	//			Url:          uri,
+	//			ThreadId:     threadIdStr,
+	//			PageSeq:      pageSeq,
+	//			PostSeq:      postNr,
+	//			ThreadPostId: int64(pageSeq)*1000 + int64(postNr),
+	//			Id:           id,
+	//			User:         user,
+	//			UserIcon:     userIconUri,
+	//			Hdr:          hdr,
+	//			Msg:          msg,
+	//			Html:         sanehtml,
+	//		}
+	//		bodies = append(bodies, x)
+	//	}
+	//})
 	return bodies, nil
 }
 
 func (fp *YahooAnswersParser) parseReservice(body io.Reader) ([]forum.Post, error) {
+	bodies := make([]forum.Post, 0)
+
 	// fmt.Println("RESERVICE PARSE")
 	data, err := ioutil.ReadAll(body)
 	if err != nil {
@@ -247,9 +282,11 @@ func (fp *YahooAnswersParser) parseReservice(body io.Reader) ([]forum.Post, erro
 		qid := qapayload.Qid
 		for answerNr, answer := range qapayload.Answers {
 			pageSeq := qapayload.Start + answerNr
-			fmt.Println("ANS", qid, pageSeq, answer.Text)
+			// fmt.Println("ANS", qid, pageSeq, answer.Text)
 
 			// TODO refactor and emit Posts to output
+			bodies = append(bodies, newAnswerPost(qid, pageSeq, answer.Text))
+
 		}
 	}
 	return nil, nil
