@@ -121,9 +121,9 @@ type QAPagePayload struct {
 	IsServerFetched bool `json:"isServerFetched"`
 }
 
-func newQuestionPost(qid string, question string, text string) forum.Post {
+func newQuestionPost(qid string, question string, text string, url string) forum.Post {
 	return forum.Post{
-		Url:          "",
+		Url:          url,
 		ThreadId:     qid,
 		PostSeq:      0,
 		PageSeq:      0,
@@ -137,9 +137,9 @@ func newQuestionPost(qid string, question string, text string) forum.Post {
 	}
 }
 
-func newAnswerPost(qid string, nr int, text string) forum.Post {
+func newAnswerPost(qid string, nr int, text string, url string) forum.Post {
 	return forum.Post{
-		Url:          "",
+		Url:          url,
 		ThreadId:     qid,
 		PostSeq:      nr + 1,
 		PageSeq:      nr / 10,
@@ -159,7 +159,7 @@ func (fp *YahooAnswersParser) ParseResponse(body io.Reader, header http.Header, 
 
 	// There are special PUT requests that are used for pagination, we handle them here
 	if strings.Contains(uri, "_reservice_") {
-		return fp.parseReservice(body)
+		return fp.parseReservice(body, uri)
 	}
 
 	ctype := header.Get("content-type")
@@ -215,12 +215,12 @@ func (fp *YahooAnswersParser) ParseResponse(body io.Reader, header http.Header, 
 			question := payload.Mainentity.Name
 			questionText := payload.Mainentity.Text
 			// fmt.Println("QST", threadIdStr, question)
-			bodies = append(bodies, newQuestionPost(threadIdStr, html.UnescapeString(question), html.UnescapeString(questionText)))
-			bodies = append(bodies, newAnswerPost(threadIdStr, 0, html.UnescapeString(payload.Mainentity.Acceptedanswer.Text)))
+			bodies = append(bodies, newQuestionPost(threadIdStr, html.UnescapeString(question), html.UnescapeString(questionText), uri))
+			bodies = append(bodies, newAnswerPost(threadIdStr, 0, html.UnescapeString(payload.Mainentity.Acceptedanswer.Text), uri))
 			for nr, answer := range payload.Mainentity.Suggestedanswer {
 				// TODO: get the start and count from the original request, so we know what the proper subpageSeq numbers are
 				// fmt.Println("ANS2", threadIdStr, nr+1, html.UnescapeString(answer.Text))
-				bodies = append(bodies, newAnswerPost(threadIdStr, nr+1, html.UnescapeString(answer.Text)))
+				bodies = append(bodies, newAnswerPost(threadIdStr, nr+1, html.UnescapeString(answer.Text), uri))
 			}
 
 		}
@@ -260,7 +260,7 @@ func (fp *YahooAnswersParser) ParseResponse(body io.Reader, header http.Header, 
 	return bodies, nil
 }
 
-func (fp *YahooAnswersParser) parseReservice(body io.Reader) ([]forum.Post, error) {
+func (fp *YahooAnswersParser) parseReservice(body io.Reader, url string) ([]forum.Post, error) {
 	bodies := make([]forum.Post, 0)
 
 	// fmt.Println("RESERVICE PARSE")
@@ -287,7 +287,7 @@ func (fp *YahooAnswersParser) parseReservice(body io.Reader) ([]forum.Post, erro
 			// fmt.Println("ANS", qid, pageSeq, answer.Text)
 
 			// TODO refactor and emit Posts to output
-			bodies = append(bodies, newAnswerPost(qid, pageSeq, answer.Text))
+			bodies = append(bodies, newAnswerPost(qid, pageSeq, answer.Text, url))
 
 		}
 	}

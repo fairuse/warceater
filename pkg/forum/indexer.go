@@ -84,7 +84,7 @@ func postToDocument(p Post) *bluge.Document {
 
 func newStoredTextField(name string, content string) *bluge.TermField {
 	field := bluge.NewTextField(name, content)
-	field.FieldOptions |= bluge.Store
+	field.FieldOptions |= bluge.Store | bluge.SearchTermPositions
 	return field
 }
 
@@ -255,6 +255,10 @@ func (f *Indexer) SearchByRequest(searchRequest bluge.SearchRequest) SearchRespo
 				r.ThreadId = string(value)
 			case "hdr":
 				r.Hdr = string(value)
+			case "url":
+				r.Url = string(value)
+			case "user":
+				r.User = string(value)
 			}
 			return true
 		})
