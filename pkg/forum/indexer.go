@@ -18,7 +18,9 @@ type Indexer struct {
 	reader     *bluge.Reader
 	batch      *index.Batch
 	count      int
+	dupCount   int
 	batchCount int
+	seen       map[string]bool
 }
 
 func NewForumIndex(path string) *Indexer {
@@ -31,7 +33,7 @@ func NewForumIndex(path string) *Indexer {
 	//mapping.AddDocumentMapping("post", docmap)
 	config := bluge.DefaultConfig(path)
 	// TODO: expose the number of writer threads to the config and set it to a higher number
-	index, err := bluge.OpenWriter(config)
+	idx, err := bluge.OpenWriter(config)
 	if err != nil {
 		// index, err = bluge.New(path, mapping)
 		//index, err = bluge.NewUsing(path, mapping, scorch.Name, scorch.Name, map[string]interface{}{"numSnapshotsToKeep": 0, "unsafe_batch": true})
@@ -40,12 +42,12 @@ func NewForumIndex(path string) *Indexer {
 		//}
 	}
 
-	reader, err := index.Reader()
+	reader, err := idx.Reader()
 	if err != nil {
 		panic(err)
 	}
 
-	return &Indexer{idx: index, reader: reader}
+	return &Indexer{idx: idx, reader: reader}
 }
 
 func postToDocument(p Post) *bluge.Document {
@@ -101,17 +103,26 @@ func newStoredSortedKeywordField(name string, content string) *bluge.TermField {
 func (f *Indexer) AddPost(b Post) {
 	if f.batch == nil {
 		f.batch = bluge.NewBatch()
+		f.seen = make(map[string]bool)
 		f.batchCount = 0
 	}
 	f.count++
 	// todo use id and b to construct a document!
+	_, seen := f.seen[b.Id]
+	if seen {
+		log.Println("skipping duplicate post", b.Id)
+		f.dupCount++
+		return
+	}
+	f.seen[b.Id] = true
 	doc := postToDocument(b)
 	f.batch.Insert(doc)
 	f.batchCount++
 	if f.batchCount >= 10000 {
-		fmt.Println("flushing search index batch (", f.count, "total posts seen)")
+		fmt.Println("flushing search index batch (", f.count, "total posts seen", f.dupCount, "duplicates)")
 		f.idx.Batch(f.batch)
 		f.batch.Reset()
+		f.seen = make(map[string]bool)
 		f.batchCount = 0
 	}
 }
@@ -193,9 +204,10 @@ func (f *Indexer) Search(query bluge.Query) (response SearchResponse) {
 func (f *Indexer) SearchThread(threadId string) (response SearchResponse) {
 	//q := bluge.NewQueryStringQuery(query)
 	// tid := float64(threadId)
-	query := bluge.NewMatchQuery(threadId)
+	query := bluge.NewTermQuery(threadId)
 	query.SetField("threadid")
 	//	fmt.Println("searchThread",query.Match)
+	log.Println("running searchThread", threadId)
 
 	searchRequest := bluge.NewTopNSearch(100, query)
 	searchRequest.SortBy([]string{"threadpostid"})
@@ -241,6 +253,8 @@ func (f *Indexer) SearchByRequest(searchRequest bluge.SearchRequest) SearchRespo
 				r.Id = string(value)
 			case "threadid":
 				r.ThreadId = string(value)
+			case "hdr":
+				r.Hdr = string(value)
 			}
 			return true
 		})

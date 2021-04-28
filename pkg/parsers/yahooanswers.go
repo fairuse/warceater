@@ -121,7 +121,7 @@ type QAPagePayload struct {
 	IsServerFetched bool `json:"isServerFetched"`
 }
 
-func newQuestionPost(qid string, text string) forum.Post {
+func newQuestionPost(qid string, question string, text string) forum.Post {
 	return forum.Post{
 		Url:          "",
 		ThreadId:     qid,
@@ -131,7 +131,7 @@ func newQuestionPost(qid string, text string) forum.Post {
 		Id:           qid + "-q",
 		User:         "",
 		UserIcon:     "",
-		Hdr:          "",
+		Hdr:          question,
 		Msg:          text,
 		Html:         "",
 	}
@@ -212,9 +212,10 @@ func (fp *YahooAnswersParser) ParseResponse(body io.Reader, header http.Header, 
 			// fmt.Println("!!! GOT A SCRIPT HURRAH!", payload)
 			// fmt.Println("QQQ", selection.Text())
 			// put the accepted answer at position 0?
-			question := payload.Mainentity.Text
+			question := payload.Mainentity.Name
+			questionText := payload.Mainentity.Text
 			// fmt.Println("QST", threadIdStr, question)
-			bodies = append(bodies, newQuestionPost(threadIdStr, html.UnescapeString(question)))
+			bodies = append(bodies, newQuestionPost(threadIdStr, html.UnescapeString(question), html.UnescapeString(questionText)))
 			bodies = append(bodies, newAnswerPost(threadIdStr, 0, html.UnescapeString(payload.Mainentity.Acceptedanswer.Text)))
 			for nr, answer := range payload.Mainentity.Suggestedanswer {
 				// TODO: get the start and count from the original request, so we know what the proper subpageSeq numbers are

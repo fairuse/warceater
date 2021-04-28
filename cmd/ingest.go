@@ -91,7 +91,7 @@ func loadWarc(filename string, parser forum.Parser) {
 		indexWaiter.Done()
 	}()
 
-	const workerCount = 4
+	const workerCount = 8
 	workerWaiter.Add(workerCount)
 	for nr := 0; nr < workerCount; nr++ {
 		go func(threadNr int) {
