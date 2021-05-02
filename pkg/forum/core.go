@@ -1,6 +1,9 @@
 package forum
 
-import "html/template"
+import (
+	"html/template"
+	"time"
+)
 
 type Post struct {
 	Url          string `json:"url"`
@@ -17,7 +20,7 @@ type Post struct {
 }
 type SearchResponse struct {
 	Results     []SearchResult
-	TimeSeconds float64
+	TimeSeconds time.Duration
 	ResultCount uint64
 }
 

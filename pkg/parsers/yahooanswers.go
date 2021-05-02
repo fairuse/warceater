@@ -121,7 +121,7 @@ type QAPagePayload struct {
 	IsServerFetched bool `json:"isServerFetched"`
 }
 
-func newQuestionPost(qid string, question string, text string, url string) forum.Post {
+func newQuestionPost(qid string, question string, text string, url string, user string) forum.Post {
 	return forum.Post{
 		Url:          url,
 		ThreadId:     qid,
@@ -129,7 +129,7 @@ func newQuestionPost(qid string, question string, text string, url string) forum
 		PageSeq:      0,
 		ThreadPostId: "",
 		Id:           qid + "-q",
-		User:         "",
+		User:         user,
 		UserIcon:     "",
 		Hdr:          question,
 		Msg:          text,
@@ -137,7 +137,7 @@ func newQuestionPost(qid string, question string, text string, url string) forum
 	}
 }
 
-func newAnswerPost(qid string, nr int, text string, url string) forum.Post {
+func newAnswerPost(qid string, nr int, text string, url string, user string) forum.Post {
 	return forum.Post{
 		Url:          url,
 		ThreadId:     qid,
@@ -145,7 +145,7 @@ func newAnswerPost(qid string, nr int, text string, url string) forum.Post {
 		PageSeq:      nr / 10,
 		ThreadPostId: fmt.Sprintf("%s-%05d", qid, nr),
 		Id:           qid + "-a-" + fmt.Sprintf("%05d", nr),
-		User:         "",
+		User:         user,
 		UserIcon:     "",
 		Hdr:          "",
 		Msg:          text,
@@ -214,13 +214,14 @@ func (fp *YahooAnswersParser) ParseResponse(body io.Reader, header http.Header, 
 			// put the accepted answer at position 0?
 			question := payload.Mainentity.Name
 			questionText := payload.Mainentity.Text
+			asker := payload.Mainentity.Author.Name
 			// fmt.Println("QST", threadIdStr, question)
-			bodies = append(bodies, newQuestionPost(threadIdStr, html.UnescapeString(question), html.UnescapeString(questionText), uri))
-			bodies = append(bodies, newAnswerPost(threadIdStr, 0, html.UnescapeString(payload.Mainentity.Acceptedanswer.Text), uri))
+			bodies = append(bodies, newQuestionPost(threadIdStr, html.UnescapeString(question), html.UnescapeString(questionText), uri, asker))
+			bodies = append(bodies, newAnswerPost(threadIdStr, 0, html.UnescapeString(payload.Mainentity.Acceptedanswer.Text), uri, payload.Mainentity.Acceptedanswer.Author.Name))
 			for nr, answer := range payload.Mainentity.Suggestedanswer {
 				// TODO: get the start and count from the original request, so we know what the proper subpageSeq numbers are
 				// fmt.Println("ANS2", threadIdStr, nr+1, html.UnescapeString(answer.Text))
-				bodies = append(bodies, newAnswerPost(threadIdStr, nr+1, html.UnescapeString(answer.Text), uri))
+				bodies = append(bodies, newAnswerPost(threadIdStr, nr+1, html.UnescapeString(answer.Text), uri, answer.Author.Name))
 			}
 
 		}
@@ -287,7 +288,7 @@ func (fp *YahooAnswersParser) parseReservice(body io.Reader, url string) ([]foru
 			// fmt.Println("ANS", qid, pageSeq, answer.Text)
 
 			// TODO refactor and emit Posts to output
-			bodies = append(bodies, newAnswerPost(qid, pageSeq, answer.Text, url))
+			bodies = append(bodies, newAnswerPost(qid, pageSeq, answer.Text, url, answer.Answerer.Nickname))
 
 		}
 	}

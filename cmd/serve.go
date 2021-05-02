@@ -79,6 +79,8 @@ func serve() {
 	fi := forum.NewForumIndex(indexPath)
 	defer fi.Close()
 
+	fi.Stats()
+
 	srv := SearchController{idx: fi}
 
 	router := gin.Default()

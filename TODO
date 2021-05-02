@@ -1,3 +1,6 @@
+- add structured logging
+- fix bluge counts and timings
+- figure out if struct annotation for bluge records is appropriate instead of this manual visitor
 V add the author to each post
 V extract two-leter abbreviations for each username
 V generate a random sensible color for each username

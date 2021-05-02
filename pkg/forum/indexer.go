@@ -11,6 +11,8 @@ import (
 	"golang.org/x/net/html"
 	"html/template"
 	"log"
+	"strings"
+	"time"
 )
 
 type Indexer struct {
@@ -78,7 +80,7 @@ func postToDocument(p Post) *bluge.Document {
 	d.AddField(newStoredTextField("hdr", p.Hdr))
 	d.AddField(newStoredTextField("msg", p.Msg))
 	d.AddField(newStoredTextField("html", p.Html))
-
+	// d.AddField(bluge.NewCompositeFieldExcluding("_all", []string{"_id"}))
 	return d
 }
 
@@ -110,7 +112,7 @@ func (f *Indexer) AddPost(b Post) {
 	// todo use id and b to construct a document!
 	_, seen := f.seen[b.Id]
 	if seen {
-		log.Println("skipping duplicate post", b.Id)
+		//log.Println("skipping duplicate post", b.Id)
 		f.dupCount++
 		return
 	}
@@ -181,11 +183,19 @@ func (f *Indexer) SearchQueryString(q string) SearchResponse {
 	return f.Search(query)
 }
 
+func (f *Indexer) Stats() {
+	cnt, err := f.reader.Count()
+	if err != nil {
+		fmt.Println("error counting", err)
+	}
+	fmt.Println("index has", cnt, "records")
+}
+
 func (f *Indexer) Search(query bluge.Query) (response SearchResponse) {
 	fmt.Println("query string:", query)
 	//q := bluge.NewQueryStringQuery(query)
 
-	searchRequest := bluge.NewTopNSearch(100, query)
+	searchRequest := bluge.NewTopNSearch(100, query).WithStandardAggregations()
 	//	searchRequest.Fields = []string{"*"}
 	//	searchRequest.Size = 100
 
@@ -224,7 +234,6 @@ func (f *Indexer) SearchThread(threadId string) (response SearchResponse) {
 
 func (f *Indexer) SearchByRequest(searchRequest bluge.SearchRequest) SearchResponse {
 	//var reader bluge.Reader // TODO this still needs to be split off, put in the f struct, etc.
-
 	log.Println("running SearchByRequest...")
 	searchResult, err := f.reader.Search(context.Background(), searchRequest)
 	if err != nil {
@@ -235,6 +244,14 @@ func (f *Indexer) SearchByRequest(searchRequest bluge.SearchRequest) SearchRespo
 	// searchResult, _ := f.idx.Search(searchRequest)
 
 	results := make([]SearchResult, 0)
+
+	var resultCount uint64
+	var duration time.Duration
+
+	if searchResult.Aggregations() != nil {
+		resultCount = searchResult.Aggregations().Count()
+		duration = searchResult.Aggregations().Duration()
+	}
 
 	match, err := searchResult.Next()
 	for err == nil && match != nil {
@@ -265,6 +282,9 @@ func (f *Indexer) SearchByRequest(searchRequest bluge.SearchRequest) SearchRespo
 		if err != nil {
 			log.Fatalf("error loading stored fields: %v", err)
 		}
+		r.Initials = substr(strings.TrimSpace(r.User), 0, 2)
+		r.UserColor = makeUniqueColor(r.User)
+
 		results = append(results, r)
 		match, err = searchResult.Next()
 	}
@@ -307,7 +327,7 @@ func (f *Indexer) SearchByRequest(searchRequest bluge.SearchRequest) SearchRespo
 	*/
 	return SearchResponse{
 		Results:     results,
-		TimeSeconds: 0, // TODO compute this ourselves? searchResult.Took.Seconds(),
-		ResultCount: 0, // searchResult.Total,
+		TimeSeconds: duration,    // TODO compute this ourselves? searchResult.Took.Seconds(),
+		ResultCount: resultCount, // searchResult.Total,
 	}
 }
