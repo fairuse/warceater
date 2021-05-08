@@ -284,7 +284,7 @@ func (fp *YahooAnswersParser) parseReservice(body io.Reader, url string) ([]foru
 		}
 		qid := qapayload.Qid
 		for answerNr, answer := range qapayload.Answers {
-			pageSeq := qapayload.Start + answerNr
+			pageSeq := qapayload.Start + answerNr - 1 // zero based numbering here
 			// fmt.Println("ANS", qid, pageSeq, answer.Text)
 
 			// TODO refactor and emit Posts to output
