@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha1"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/blugelabs/bluge"
 	"github.com/blugelabs/bluge/index"
@@ -11,6 +12,7 @@ import (
 	"golang.org/x/net/html"
 	"html/template"
 	"log"
+	"os"
 	"strings"
 	"time"
 )
@@ -135,12 +137,14 @@ func (f *Indexer) Close() {
 		f.batch.Reset()
 	}
 	f.idx.Close()
-	fmt.Println("indexed", f.count, "posts")
+	log.Println("indexed", f.count, "posts")
 }
 
 func (f *Indexer) AddPosts(posts []Post) {
+	enc := json.NewEncoder(os.Stdout)
 	for _, body := range posts {
-		f.AddPost(body)
+		enc.Encode(body)
+		// f.AddPost(body)
 	}
 }
 

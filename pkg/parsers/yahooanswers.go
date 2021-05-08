@@ -292,5 +292,5 @@ func (fp *YahooAnswersParser) parseReservice(body io.Reader, url string) ([]foru
 
 		}
 	}
-	return nil, nil
+	return bodies, nil
 }
