@@ -123,7 +123,7 @@ func (f *Indexer) AddPost(b Post) {
 	f.batch.Insert(doc)
 	f.batchCount++
 	if f.batchCount >= 10000 {
-		fmt.Println("flushing search index batch (", f.count, "total posts seen", f.dupCount, "duplicates)")
+		log.Println("flushing search index batch (", f.count, "total posts seen", f.dupCount, "duplicates)")
 		f.idx.Batch(f.batch)
 		f.batch.Reset()
 		f.seen = make(map[string]bool)

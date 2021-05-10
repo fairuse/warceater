@@ -134,7 +134,7 @@ func loadWarc(filename string, parser forum.Parser) {
 				//fmt.Println("RECHDR:", record.Headers)
 				reqbody, err := ioutil.ReadAll(request.Body)
 				if err != nil {
-					fmt.Println("failed to read req body")
+					log.Println("failed to read req body")
 				}
 				_ = reqbody // TODO use this somewhere
 				//fmt.Println("REQBODY:", string(reqbody))
