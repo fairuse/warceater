@@ -205,7 +205,7 @@ func (fp *YahooAnswersParser) ParseResponse(body io.Reader, header http.Header, 
 		var payload PagePayload
 		err := json.Unmarshal([]byte(selection.Text()), &payload)
 		if err != nil {
-			fmt.Println("failed to parse page payload", err)
+			log.Println("failed to parse page payload", err)
 			return
 		}
 		if payload.Type == "QAPage" {
